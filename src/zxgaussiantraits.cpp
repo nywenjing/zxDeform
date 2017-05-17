@@ -58,9 +58,165 @@ void zxTetrahedron4G1Trait::shape_deriv(real* Hr,real* Hs,real* Ht,real r, real 
 
 }
 
+zxTetrahedron10G4Trait::zxTetrahedron10G4Trait()
+{
+    m_type = C3D10_4;
+    // integration point coordinates
+    const double a = 0.58541020;
+    const double b = 0.13819660;
+    const double w = 0.25 / 6.0;
+    m_grst(0,0) = a; m_grst(0,1) = b; m_grst(0,2) = b; m_gw[ 0] = w;
+    m_grst(1,0) = b; m_grst(1,1) = a; m_grst(1,2) = b; m_gw[ 0] = w;
+    m_grst(2,0) = b; m_grst(2,1) = b; m_grst(2,2) = a; m_gw[ 0] = w;
+    m_grst(3,0) = b; m_grst(3,1) = b; m_grst(3,2) = b; m_gw[ 0] = w;
+
+    init();
+}
+
+void zxTetrahedron10G4Trait::shape_func(real* H,real r,real s,real t)
+{
+    double r1 = 1.0 - r - s - t;
+    double r2 = r;
+    double r3 = s;
+    double r4 = t;
+
+    H[0] = r1*(2.0*r1 - 1.0);
+    H[1] = r2*(2.0*r2 - 1.0);
+    H[2] = r3*(2.0*r3 - 1.0);
+    H[3] = r4*(2.0*r4 - 1.0);
+    H[4] = 4.0*r1*r2;
+    H[5] = 4.0*r2*r3;
+    H[6] = 4.0*r3*r1;
+    H[7] = 4.0*r1*r4;
+    H[8] = 4.0*r2*r4;
+    H[9] = 4.0*r3*r4;
+
+}
+
+void zxTetrahedron10G4Trait::shape_deriv(real* Hr,real* Hs,real* Ht,real r, real s, real t)
+{
+    Hr[0] = -3.0 + 4.0*r + 4.0*(s + t);
+    Hr[1] =  4.0*r - 1.0;
+    Hr[2] =  0.0;
+    Hr[3] =  0.0;
+    Hr[4] =  4.0 - 8.0*r - 4.0*(s + t);
+    Hr[5] =  4.0*s;
+    Hr[6] = -4.0*s;
+    Hr[7] = -4.0*t;
+    Hr[8] =  4.0*t;
+    Hr[9] =  0.0;
+
+    Hs[0] = -3.0 + 4.0*s + 4.0*(r + t);
+    Hs[1] =  0.0;
+    Hs[2] =  4.0*s - 1.0;
+    Hs[3] =  0.0;
+    Hs[4] = -4.0*r;
+    Hs[5] =  4.0*r;
+    Hs[6] =  4.0 - 8.0*s - 4.0*(r + t);
+    Hs[7] = -4.0*t;
+    Hs[8] =  0.0;
+    Hs[9] =  4.0*t;
+
+    Ht[0] = -3.0 + 4.0*t + 4.0*(r + s);
+    Ht[1] =  0.0;
+    Ht[2] =  0.0;
+    Ht[3] =  4.0*t - 1.0;
+    Ht[4] = -4.0*r;
+    Ht[5] =  0.0;
+    Ht[6] = -4.0*s;
+    Ht[7] =  4.0 - 8.0*t - 4.0*(r + s);
+    Ht[8] =  4.0*r;
+    Ht[9] =  4.0*s;
+
+}
+
+zxTriangle3G3Trait::zxTriangle3G3Trait()
+{
+    m_type = S3_3;
+
+    real a = 1.0/6.0;
+    real b = 2.0/3.0;
+
+    m_grst(0,0) = a; m_grst(0,1) = a; m_grst(0,2) = 0.0;
+    m_grst(1,0) = b; m_grst(1,1) = a; m_grst(1,2) = 0.0;
+    m_grst(2,0) = a; m_grst(2,1) = b; m_grst(2,2) = 0.0;
+
+    m_gw[0] = m_gw[1] = m_gw[2] = 1.0/6;
+
+    init();
+}
+
+void zxTriangle3G3Trait::shape_func(real* H,real r,real s,real t)
+{
+    H[0] = 1.0 - r - s;
+    H[1] = r;
+    H[2] = s;
+
+}
+
+void zxTriangle3G3Trait::shape_deriv(real* Hr,real* Hs,real* Ht,real r, real s, real t)
+{
+    Hr[0] = -1; Hs[0] = -1;
+    Hr[1] =  1; Hs[1] =  0;
+    Hr[2] =  0; Hs[2] =  1;
+
+}
+
+zxTriangle6G3Trait::zxTriangle6G3Trait()
+{
+    m_type = S6_3;
+
+    real a = 1.0/6.0;
+    real b = 2.0/3.0;
+
+    m_grst(0,0) = a; m_grst(0,1) = a; m_grst(0,2) = 0.0;
+    m_grst(1,0) = b; m_grst(1,1) = a; m_grst(1,2) = 0.0;
+    m_grst(2,0) = a; m_grst(2,1) = b; m_grst(2,2) = 0.0;
+
+    m_gw[0] = m_gw[1] = m_gw[2] = 1.0/6;
+
+    init();
+}
+
+void zxTriangle6G3Trait::shape_func(real* H,real r,real s,real t)
+{
+    double r1 = 1.0 - r - s;
+    double r2 = r;
+    double r3 = s;
+
+    H[0] = r1*(2.0*r1 - 1.0);
+    H[1] = r2*(2.0*r2 - 1.0);
+    H[2] = r3*(2.0*r3 - 1.0);
+    H[3] = 4.0*r1*r2;
+    H[4] = 4.0*r2*r3;
+    H[5] = 4.0*r3*r1;
+
+}
+
+void zxTriangle6G3Trait::shape_deriv(real* Hr,real* Hs,real* Ht,real r, real s, real t)
+{
+    Hr[0] = -3.0 + 4.0*r + 4.0*s;
+    Hr[1] =  4.0*r - 1.0;
+    Hr[2] =  0.0;
+    Hr[3] =  4.0 - 8.0*r - 4.0*s;
+    Hr[4] =  4.0*s;
+    Hr[5] = -4.0*s;
+
+    Hs[0] = -3.0 + 4.0*s + 4.0*r;
+    Hs[1] =  0.0;
+    Hs[2] =  4.0*s - 1.0;
+    Hs[3] = -4.0*r;
+    Hs[4] =  4.0*r;
+    Hs[5] =  4.0 - 8.0*s - 4.0*r;
+
+}
+
 zxGaussianFactory::zxGaussianFactory()
 {
     m_traits_group[zxTetrahedron4G1Trait::Singleton().m_type] = &(zxTetrahedron4G1Trait::Singleton());
+    m_traits_group[zxTetrahedron10G4Trait::Singleton().m_type] = &(zxTetrahedron10G4Trait::Singleton());
+    m_traits_group[zxTriangle3G3Trait::Singleton().m_type] = &(zxTriangle3G3Trait::Singleton());
+    m_traits_group[zxTriangle6G3Trait::Singleton().m_type] = &(zxTriangle6G3Trait::Singleton());
 }
 
 template<size_t NN,size_t NI>

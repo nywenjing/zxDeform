@@ -5,14 +5,7 @@
 #include "zxlcpconstraint.h"
 #include "zxcontactpoint.h"
 
-class zxTestConstraint : public zxLCPConstraint
-{
-public:
-    zxTestConstraint(zxContactPoint::Ptr cp)
-    {
-        cp->m_normal *= 1.0;
-    }
-};
+
 
 class zxContactConstraint : public zxLCPConstraint
 {

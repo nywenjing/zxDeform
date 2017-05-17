@@ -9,6 +9,15 @@ class zxMaterialPoint
 {
     ZX_MAKE_SHARED_MACO(zxMaterialPoint)
     static Ptr create(){return Ptr (new zxMaterialPoint());}
+
+public:
+    zxMaterialPoint()
+    {
+        m_dPsdF_diag.resize(9,9);
+        m_dFdr.resize(9,12);
+        m_dFdr_trans.resize(12,9);
+    }
+
 public:
     mat3d m_defgrad;
     mat3d m_invJac0;
@@ -23,6 +32,13 @@ public:
 
 };
 
+enum zxBC
+{
+    zxFree = 0,
+    zxFixed,
+    zxPrescribed
+};
+
 class zxNode
 {
 ZX_MAKE_SHARED_MACO(zxNode)
@@ -32,6 +48,9 @@ public:
         rp.setZero();
         rt.setZero();
         r0.setZero();
+
+        m_bc[0] = m_bc[1] = m_bc[2] = zxFree;
+        m_dof_id[0] = m_dof_id[1] = m_dof_id[2] = -1;
 
         reset_iac();
     }
@@ -43,10 +62,19 @@ public:
     int   m_id;
 
 public:
+    vec3d rl;
+
+public:
     void reset_iac(){ m_isLcp = false; m_lcp_res_imp = m_lcp_dx = m_lcp_pcg_dx = m_lcp_imp = vec3d::Zero(); m_lcp_invA.setZero();}
     bool    m_isLcp;
     vec3d   m_lcp_dx,m_lcp_pcg_dx,m_lcp_imp,m_lcp_res_imp;
     mat3d   m_lcp_invA;
+
+public:
+
+    zxBC    m_bc[3];
+    int     m_dof_id[3];
+
 };
 
 class zxElement

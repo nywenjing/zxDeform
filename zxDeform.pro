@@ -18,6 +18,7 @@ INCLUDEPATH += ./src\
 ./third_party/eigen3.3.3 \
 ./third_party
 
+LIBS +=
 
 SOURCES += main.cpp\
         mainwindow.cpp \
@@ -47,7 +48,11 @@ SOURCES += main.cpp\
     src/zxcontactpoint.cpp \
     src/zxlcpconstraint.cpp \
     src/zxcontactconstraint.cpp \
-    src/zxfrictionconstraint.cpp
+    src/zxfrictionconstraint.cpp \
+    src/zxclothforcemodel.cpp \
+    src/zxalmsimulator.cpp \
+    src/zxalmcontactinterface.cpp \
+    src/zxalmfacetofacecontact.cpp
 
 HEADERS  += mainwindow.h \
     src/zxmath.h \
@@ -75,6 +80,10 @@ HEADERS  += mainwindow.h \
     src/zxcontactpoint.h \
     src/zxlcpconstraint.h \
     src/zxcontactconstraint.h \
-    src/zxfrictionconstraint.h
+    src/zxfrictionconstraint.h \
+    src/zxclothforcemodel.h \
+    src/zxalmsimulator.h \
+    src/zxalmcontactinterface.h \
+    src/zxalmfacetofacecontact.h
 
 FORMS    += mainwindow.ui

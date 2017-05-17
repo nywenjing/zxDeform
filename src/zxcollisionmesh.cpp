@@ -1,5 +1,6 @@
 #include "zxcollisionmesh.h"
 #include "igl/read_triangle_mesh.h"
+#include "igl/write_triangle_mesh.h"
 zxCollisionMesh::zxCollisionMesh()
 {
 
@@ -69,6 +70,8 @@ zxCollisionMesh::zxCollisionMesh(zxSolidMesh::Ptr mesh)
 
         m_faces[el] = face;
     }
+
+    update_position();
 
     build_edges();
 
@@ -163,6 +166,16 @@ void zxCollisionMesh::build_edges()
             face->e[i]->m_test_face = face.get();
         }
     }
+
+}
+
+void zxCollisionMesh::save(std::string filename)
+{
+    Eigen::MatrixXd V;
+    Eigen::MatrixXi F;
+    get_Matrix_Format(V,F);
+
+    igl::write_triangle_mesh(filename,V,F);
 
 }
 

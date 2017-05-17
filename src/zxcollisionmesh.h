@@ -73,6 +73,10 @@ public:
 
         }
 
+        vec3d   compute_normal(){ vec3d nor = (v[0]->x - v[1]->x).cross(v[0]->x - v[2]->x); return nor.normalized();}
+        real    compute_area(){vec3d nor = (v[0]->x - v[1]->x).cross(v[0]->x - v[2]->x); return 0.5 * nor.norm();}
+        real    compute_area0(){vec3d nor = (v[0]->x0 - v[1]->x0).cross(v[0]->x0 - v[2]->x0); return 0.5 * nor.norm();}
+
         public:
             Vert::Ptr   v[3];
             Edge::Ptr   e[3];
@@ -94,6 +98,7 @@ public:
 
 public:
     void        get_Matrix_Format(Eigen::MatrixXd& V,Eigen::MatrixXi& F);
+    void        save(std::string filename);
 
 public:
     void        update_aabb(bool ccd);

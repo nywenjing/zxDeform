@@ -2,6 +2,12 @@
 
 void zxSolidElement::init_material_points()
 {
+    m_material_points.resize(get_num_gaussian_points());
+    for(int i = 0; i < get_num_gaussian_points(); i++)
+    {
+        m_material_points[i] = zxMaterialPoint::create();
+    }
+
     for(size_t ni = 0; ni < get_num_gaussian_points(); ni++)
     {
         zxMaterialPoint::Ptr pt = get_material_point(ni);
@@ -25,6 +31,8 @@ void zxSolidElement::init_material_points()
         }
         pt->m_invJac0 = J.inverse();
         pt->m_detJac0 = J.determinant();
+
+        assert(pt->m_detJac0 > 0);
     }
 
     for(size_t ni = 0; ni < get_num_gaussian_points(); ni++)
@@ -72,6 +80,8 @@ zxTetrahedralMesh::zxTetrahedralMesh(std::string filename)
 
     std::ifstream ifile;
     ifile.open(nodefile);
+
+    assert(ifile.is_open());
 
     size_t nv;
     size_t dim;
@@ -125,15 +135,7 @@ zxTetrahedralMesh::zxTetrahedralMesh(std::string filename)
             tet->m_nodes[j] = get_node(T(e_id,j) - 1);
 
         tet->m_type = zxGaussianTrait::C3D4_1;
-        tet->m_material_points.resize(tet->get_num_gaussian_points());
-        for(int i = 0; i < tet->get_num_gaussian_points(); i++)
-        {
-            zxMaterialPoint::Ptr p_mat = zxMaterialPoint::create();
-            p_mat->m_dPsdF_diag.resize(9,9);
-            p_mat->m_dFdr.resize(9,12);
-            p_mat->m_dFdr_trans.resize(12,9);
-            tet->m_material_points[i] = p_mat;
-        }
+
 
         tet->init_material_points();
         tet->m_id = e_id;
@@ -141,13 +143,124 @@ zxTetrahedralMesh::zxTetrahedralMesh(std::string filename)
     }
 }
 
-void zxTetrahedralMesh::buildSurface(Eigen::MatrixXd& V,Eigen::MatrixXi& W_id,Eigen::MatrixXd& W_val,Eigen::MatrixXi& F)
+void zxTetrahedralMesh::convertToC3D10()
+{
+    assert(get_element(0)->m_nodes.size() != 10);
+
+    class Edge
+    {
+    public:
+        size_t m_id[2];
+        int    m_gid;
+
+        zxNode::Ptr m_node;
+
+        bool operator < (const Edge& e) const
+        {
+            for(int i = 0; i < 2; i++)
+            {
+                if(m_id[i] > e.m_id[i])
+                    return false;
+                if(m_id[i] < e.m_id[i])
+                    return true;
+            }
+
+            return false;
+
+        }
+
+        bool operator == (const Edge& e) const
+        {
+            return (m_id[0] == e.m_id[0]) && (m_id[1] == e.m_id[1]);
+        }
+    };
+
+    int elEdge[6][2] = {{0,1},{1,2},{0,2},{0,3},{1,3},{2,3}};
+
+    std::vector<Edge> allEdges;
+    allEdges.reserve(6 * get_num_elements());
+
+    for(size_t el = 0; el < get_num_elements(); el++)
+    {
+        for(int i = 0; i < 6; i++)
+        {
+            Edge e;
+            int id0 = get_node(el,elEdge[i][0])->m_id;
+            int id1 = get_node(el,elEdge[i][1])->m_id;
+
+            e.m_id[0] = std::min(id0,id1);
+            e.m_id[1] = std::max(id0,id1);
+
+            allEdges.push_back(e);
+        }
+    }
+
+    std::sort(allEdges.begin(),allEdges.end());
+
+    std::vector<Edge> uniqEdge = allEdges;
+    std::vector<Edge>::iterator last = std::unique_copy(allEdges.begin(),allEdges.end(),uniqEdge.begin());
+    uniqEdge.resize(std::distance(uniqEdge.begin(),last));
+
+    m_nodes.reserve(m_nodes.size() + uniqEdge.size());
+    for(size_t i = 0; i < uniqEdge.size(); i++)
+    {
+        Edge& e = uniqEdge[i];
+        e.m_gid = i;
+        zxNode::Ptr n0 = get_node(e.m_id[0]);
+        zxNode::Ptr n1 = get_node(e.m_id[1]);
+
+        zxNode::Ptr n_mid = zxNode::create();
+        n_mid->r0 = 0.5 * (n0->r0 + n1->r0);
+        n_mid->rp = 0.5 * (n0->rp + n1->rp);
+        n_mid->rt = 0.5 * (n0->rt + n1->rt);
+
+        n_mid->m_id = i + get_num_nodes();
+
+        e.m_node = n_mid;
+
+
+    }
+
+    for(size_t i = 0; i < uniqEdge.size(); i++)
+    {
+        Edge& e = uniqEdge[i];
+        m_nodes.push_back(e.m_node);
+    }
+
+    for(size_t el = 0; el < get_num_elements(); el++)
+    {
+        for(int i = 0; i < 6; i++)
+        {
+            Edge e;
+            int id0 = get_node(el,elEdge[i][0])->m_id;
+            int id1 = get_node(el,elEdge[i][1])->m_id;
+
+            e.m_id[0] = std::min(id0,id1);
+            e.m_id[1] = std::max(id0,id1);
+
+            std::vector<Edge>::iterator lb = std::lower_bound(uniqEdge.begin(),uniqEdge.end(),e);
+
+            get_element(el)->m_nodes.push_back((*lb).m_node);
+        }
+
+        get_element(el)->m_type = zxGaussianTrait::C3D10_4;
+
+        zxTetrahedron* tet = static_cast<zxTetrahedron*>(get_element(el).get());
+        tet->init_material_points();
+    }
+
+
+}
+
+void zxTetrahedralMesh::buildSurface(Eigen::MatrixXd& V,Eigen::MatrixXi& W_id,Eigen::MatrixXd& W_val,Eigen::MatrixXi& F,int tsLevel)
 {
     class Face
     {
     public:
         size_t m_id[3];
         size_t m_id0[3];
+        size_t m_tid;
+        size_t m_tfid;
 
     public:
         bool operator < (const Face& f2) const
@@ -224,21 +337,241 @@ void zxTetrahedralMesh::buildSurface(Eigen::MatrixXd& V,Eigen::MatrixXi& W_id,Ei
 
     }
 
-    V.resize(get_num_nodes(),3);
-    W_id.resize(get_num_nodes(),1);
-    W_val.resize(get_num_nodes(),1);
-    F.resize(singleFace.size(),3);
-    for(size_t i = 0; i < get_num_nodes(); i++)
+    for(size_t el = 0; el < get_num_elements(); el++)
     {
-        for(int j = 0; j < 3; j++)
-            V(i,j) = get_node(i)->rt[j];
-        W_id(i,0) = i;
-        W_val(i,0) = 1.0;
+        Tet& tet = allTets[el];
+        size_t face_indices[4][3] = {{0,2,1},{0,1,3},{0,3,2},{1,2,3}};
+
+        for(int i = 0; i < 4; i++)
+        {
+            Face face;
+            for(int j = 0; j < 3; j++)
+                face.m_id0[j] = face.m_id[j] = tet.m_id[face_indices[i][j]];
+
+            std::sort(face.m_id,face.m_id + 3);
+
+            std::vector<Face>::iterator lb = std::lower_bound(singleFace.begin(),singleFace.end(),face);
+
+            if(el == 1752)
+                el = 1752;
+            if(lb != singleFace.end() && (*lb) == face)
+            {
+                (*lb).m_tid = el;
+                (*lb).m_tfid = i;
+            }
+        }
     }
 
-    for(size_t el = 0; el < singleFace.size(); el++)
+    if(get_element(0)->m_type == zxGaussianTrait::C3D4_1)
     {
-        for(int j = 0; j < 3; j++)
-            F(el,j) = singleFace[el].m_id0[j];
+        V.resize(get_num_nodes(),3);
+        W_id.resize(get_num_nodes(),1);
+        W_val.resize(get_num_nodes(),1);
+        F.resize(singleFace.size(),3);
+        for(size_t i = 0; i < get_num_nodes(); i++)
+        {
+            for(int j = 0; j < 3; j++)
+                V(i,j) = get_node(i)->rt[j];
+            W_id(i,0) = i;
+            W_val(i,0) = 1.0;
+        }
+
+        for(size_t el = 0; el < singleFace.size(); el++)
+        {
+            for(int j = 0; j < 3; j++)
+                F(el,j) = singleFace[el].m_id0[j];
+        }
     }
+    else if(get_element(0)->m_type == zxGaussianTrait::C3D10_4)
+    {
+        class LevelFace
+        {
+            ZX_MAKE_SHARED_MACO_DEFAULT_CREAT(LevelFace)
+                    public:
+                vec2d m_rs[3];
+            size_t m_level;
+            LevelFace::Ptr m_child[4];
+
+            std::vector<LevelFace::Ptr> m_allLeaf;
+        public:
+            void setLevel(int le,vec2d rs0,vec2d rs1,vec2d rs2)
+            {
+                m_level = le;
+                m_rs[0] = rs0;
+                m_rs[1] = rs1;
+                m_rs[2] = rs2;
+
+                vec2d rs3 = 0.5 * (rs0 + rs1);
+                vec2d rs4 = 0.5 * (rs1 + rs2);
+                vec2d rs5 = 0.5 * (rs0 + rs2);
+
+                if(le != 0)
+                {
+                    m_child[0] = LevelFace::create();
+                    m_child[0]->setLevel(le-1,rs0,rs3,rs5);
+
+                    m_child[1] = LevelFace::create();
+                    m_child[1]->setLevel(le-1,rs3,rs1,rs4);
+
+                    m_child[2] = LevelFace::create();
+                    m_child[2]->setLevel(le-1,rs5,rs4,rs2);
+
+                    m_child[3] = LevelFace::create();
+                    m_child[3]->setLevel(le-1,rs3,rs4,rs5);
+
+                }
+            }
+
+            void collectLeaf()
+            {
+                for(int i = 0; i < 4; i++)
+                {
+                    if(m_child[i]->m_level > 0)
+                    {
+                        m_child[i]->collectLeaf();
+                        m_allLeaf.insert(m_allLeaf.end(),m_child[i]->m_allLeaf.begin(),m_child[i]->m_allLeaf.end());
+                    }
+                    else
+                        m_allLeaf.push_back(m_child[i]);
+                }
+            }
+
+        };
+
+        LevelFace::Ptr lface = LevelFace::create();
+        lface->setLevel(tsLevel + 1,vec2d(0,0),vec2d(1,0),vec2d(0,1));
+        lface->collectLeaf();
+
+        class tVert
+        {
+        public:
+            tVert()
+            {
+                this->m_w.resize(6);
+                this->m_node.resize(6);
+            }
+
+        public:
+            vec3d x;
+            std::vector<zxNode::Ptr> m_node;
+            std::vector<real>    m_w;
+        };
+
+        std::list<tVert> tVerts;
+
+
+        for(size_t el = 0; el < singleFace.size(); el++)
+        {
+            Face& face = singleFace[el];
+
+            size_t faceIdx[4][6] = {
+                {0,2,1,6,5,4},
+                {0,1,3,4,8,7},
+                {0,3,2,7,9,6},
+                {1,2,3,5,9,8}
+            };
+
+            std::vector<zxNode::Ptr> fnode(6);
+            for(int i = 0; i < 6; i++)
+                fnode[i] = get_node(face.m_tid,faceIdx[face.m_tfid][i]);
+
+
+            for(size_t se = 0 ; se < lface->m_allLeaf.size(); se++)
+            {
+                LevelFace::Ptr sface = lface->m_allLeaf[se];
+
+
+                for(size_t i = 0; i < 3; i++)
+                {
+                    tVert tv;
+                    zxGaussianFactory::Singleton().get_shape_fun(zxGaussianTrait::S6_3,tv.m_w.data(),sface->m_rs[i][0],sface->m_rs[i][1],0.0);
+                    tv.m_node = fnode;
+
+                    tv.x = vec3d::Zero();
+                    for(int j = 0; j < 6; j++)
+                        tv.x += tv.m_w[j] * tv.m_node[j]->rt;
+
+                    tVerts.push_back(tv);
+                }
+
+            }
+
+
+        }
+
+        V.resize(tVerts.size(),3);
+        W_id.resize(tVerts.size(),6);
+        W_val.resize(tVerts.size(),6);
+        F.resize(tVerts.size()/3,3);
+
+        int v_id = 0;
+        int f_id = 0;
+        for(std::list<tVert>::iterator it = tVerts.begin();it != tVerts.end();)
+        {
+            for(int vi = 0; vi < 3; vi++)
+            {
+                tVert& tv = *it++;
+                for(int i = 0; i < 3; i++)
+                    V(v_id,i) = tv.x[i];
+                for(int i = 0; i < 6; i++)
+                {
+                    W_id(v_id,i) = tv.m_node[i]->m_id;
+                    W_val(v_id,i) = tv.m_w[i];
+                }
+
+                F(f_id,vi) = v_id;
+
+                v_id++;
+            }
+
+            f_id++;
+        }
+
+        //        V.resize(singleFace.size() * 3, 3);
+        //        W_id.resize(singleFace.size() * 3,3);
+        //        W_val.resize(singleFace.size() * 3,3);
+        //        F.resize(singleFace.size(),3);
+
+        //        W_val.setZero();
+
+        //        for(size_t el = 0; el < singleFace.size(); el++)
+        //        {
+        //            Face& face = singleFace[el];
+
+        //            size_t faceIdx[4][6] = {
+        //                {0,2,1,6,5,4},
+        //                {0,1,3,4,8,7},
+        //                {0,3,2,7,9,6},
+        //                {1,2,3,5,9,8}
+        //            };
+
+        //            std::vector<zxNode::Ptr> fnode(6);
+        //            for(int i = 0; i < 6; i++)
+        //                fnode[i] = get_node(face.m_tid,faceIdx[face.m_tfid][i]);
+
+        //            int fid[6];
+        //            for(int i = 0; i < 6; i++)
+        //                fid[i] = fnode[i]->m_id;
+        //            int tid[10];
+        //            for(int i = 0; i < 10; i++)
+        //                tid[i] = get_node(face.m_tid,i)->m_id;
+
+        //            for(int vi = 0; vi < 3; vi++)
+        //            {
+        //                F(el,vi) = 3 * el + vi;
+
+        //                for(int i = 0; i < 3; i++)
+        //                {
+        //                    W_id(3 * el + vi,i) = fnode[i]->m_id;//face.m_id0[i];
+        //                    W_val(3 * el + vi,vi) = 1.0;
+        //                }
+        //            }
+
+        //        }
+
+
+
+    }
+
+
 }

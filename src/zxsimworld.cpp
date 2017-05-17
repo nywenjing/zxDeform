@@ -168,6 +168,7 @@ size_t  zxSimWorld::do_proxy()
 
 
 
+    return contacts.size();
 
 }
 

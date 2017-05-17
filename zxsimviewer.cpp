@@ -4,19 +4,21 @@
 #include "zxnonlinearfem_forcemodel_sparse.h"
 #include "zxtimestepperbackwardeuler.h"
 #include "zxcontactconstraint.h"
+#include "zxalmfacetofacecontact.h"
 #include "igl/per_vertex_normals.h"
 #include <GL/gl.h>
 
 zxSimViewer::zxSimViewer()
 {
 
-    zxContactPoint::Ptr cp = zxContactPoint::create();
-    zxTestConstraint* c = new zxTestConstraint(cp);
 
     m_world = zxSimWorld::create();
 
+    //ica contact
     init_femsim0();
 
+    //alm contact
+    //init_femsim1();
 
 }
 
@@ -41,7 +43,11 @@ void zxSimViewer::init_femsim0()
 {
 
     std::string volfilename = "../zxDeform/data/torus.1";
-    zxSolidMesh::Ptr vmesh = zxTetrahedralMesh::create(volfilename);
+    zxTetrahedralMesh::Ptr vmesh = zxTetrahedralMesh::create(volfilename);
+
+    //use C3D10
+   // vmesh->convertToC3D10();
+
     zxRenderMesh::Ptr rmesh = zxRenderMesh::create(vmesh);
     zxCollisionMesh::Ptr cmesh  = rmesh;
     zxMaterial::Ptr material = zxNeoHookeanMaterial::create(1e4,0.0,1e3);
@@ -66,6 +72,87 @@ void zxSimViewer::init_femsim0()
 
     m_rad = 6;
 
+}
+
+void zxSimViewer::init_femsim1()
+{
+    std::string cubename = "../zxDeform/data/cube.1";
+    std::string platename = "../zxDeform/data/plate.1";
+
+    zxSolidMesh::Ptr cubemesh = zxTetrahedralMesh::create(cubename);
+    zxSolidMesh::Ptr platemesh = zxTetrahedralMesh::create(platename);
+
+    zxRenderMesh::Ptr cubesurf = zxRenderMesh::create(cubemesh);
+    zxRenderMesh::Ptr platesurf = zxRenderMesh::create(platemesh);
+    zxMaterial::Ptr material = zxNeoHookeanMaterial::create(1e4,0.33,1e2);
+    zxNonlinearFEM_ForceModel_Sparse::Ptr cubeforcemodel = zxNonlinearFEM_ForceModel_Sparse::create(cubemesh,material);
+    zxNonlinearFEM_ForceModel_Sparse::Ptr plateforcemodel = zxNonlinearFEM_ForceModel_Sparse::create(platemesh,material);
+
+    cubesurf->save("../zxDeform/data/cube.obj");
+    platesurf->save("../zxDeform/data/plate.obj");
+    zxALMSimulator::Ptr simulator = zxALMSimulator::create();
+    real eps = 1e7;
+    zxALMFaceToFaceContact::Ptr contactInterface = zxALMFaceToFaceContact::create(platesurf,cubesurf,eps);
+
+    simulator->add_forcemodel(cubeforcemodel);
+    simulator->add_forcemodel(plateforcemodel);
+    simulator->add_contactInterface(contactInterface);
+
+    for(size_t i = 0; i < cubemesh->get_num_nodes(); i++)
+    {
+        zxNode::Ptr node = cubemesh->get_node(i);
+        if(node->r0[2] > 2 - zxEPSILON)
+           node->m_bc[0] = node->m_bc[1] = node->m_bc[2] = zxFixed;
+    }
+
+    for(size_t i = 0; i < platemesh->get_num_nodes(); i++)
+    {
+        zxNode::Ptr node = platemesh->get_node(i);
+        node->rt[2] += 0.01;
+
+        if(node->r0[2] < -0.2 + zxEPSILON)
+        {
+            node->m_bc[0] = node->m_bc[1] = zxFixed;
+            node->m_bc[2] = zxPrescribed;
+            node->rl[2] = node->r0[2] + 0.2;
+
+            zxNodalForce::Ptr nforce = zxNodalForce::create();
+            nforce->m_node  = node.get();
+            nforce->m_force = vec3d(0.0,0.0,1.0);
+
+            //simulator->add_nodal_force(nforce);
+        }
+
+        node->r0[2] += 0.01;
+    }
+
+
+    for(double dz = 0.05; dz < 0.6; dz+= 0.2)
+    {
+        for(size_t i = 0; i < platemesh->get_num_nodes(); i++)
+        {
+            zxNode::Ptr node = platemesh->get_node(i);
+
+            if(node->m_bc[2] == zxPrescribed)
+                node->rl[2] = node->r0[2] + dz;
+        }
+
+        simulator->do_simulate();
+    }
+
+
+
+
+
+    zxBody::Ptr cubebody = zxBody::create();
+    zxBody::Ptr platebody = zxBody::create();
+    cubebody->set_render_mesh(cubesurf);
+    platebody->set_render_mesh(platesurf);
+
+    m_world->add_body(cubebody);
+    m_world->add_body(platebody);
+
+    m_rad = 6;
 }
 
 void zxSimViewer::render()

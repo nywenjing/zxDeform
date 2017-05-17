@@ -3,6 +3,7 @@
 
 #include "zxglviewer_qt.h"
 #include "zxsimworld.h"
+#include "zxalmsimulator.h"
 
 class zxSimViewer : public zxGLViewer_QT
 {
@@ -17,6 +18,7 @@ public:
 
 public:
     virtual void init_femsim0();
+    virtual void init_femsim1();
 
 
 

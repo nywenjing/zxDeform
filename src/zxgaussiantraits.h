@@ -15,6 +15,8 @@ public:
         C3D4_1 = 0,
         C3D10_4,
         C3D8_8,
+        S3_3,
+        S6_3,
         NumberType
     };
 
@@ -23,6 +25,7 @@ public:
 
     virtual size_t get_num_gaussian_points() = 0;
     virtual real&   get_shape_fun(int n_id,int g_id) = 0;
+    virtual void    get_shape_fun(real* H,real r, real s, real t) = 0;
     virtual real&   get_first_derive_r(int n_id,int g_id) = 0;
     virtual real&   get_first_derive_s(int n_id,int g_id) = 0;
     virtual real&   get_first_derive_t(int n_id,int g_id) = 0;
@@ -44,6 +47,7 @@ public:
     virtual real&   get_first_derive_s(int n_id,int g_id) {return m_dgds(n_id,g_id);}
     virtual real&   get_first_derive_t(int n_id,int g_id) {return m_dgdt(n_id,g_id);}
     virtual real&   get_gaussian_weight(int g_id) {return m_gw[g_id];}
+    virtual void    get_shape_fun(real* H,real r, real s, real t) {shape_func(H,r,s,t);}
 
 protected:
     virtual void shape_func(real* H,real r,real s,real t) = 0;
@@ -61,6 +65,18 @@ public:
 
 template<size_t NI>
 class zxTetrahedron4Trait : public zxGaussianTrait_Interface<4,NI>
+{
+
+};
+
+template<size_t NI>
+class zxTriangle3Trait : public zxGaussianTrait_Interface<3,NI>
+{
+
+};
+
+template<size_t NI>
+class zxTriangle6Trait : public zxGaussianTrait_Interface<6,NI>
 {
 
 };
@@ -88,6 +104,45 @@ public:
 
 class zxTetrahedron10G4Trait : public zxTetrahedron10Trait<4>
 {
+private:
+    zxTetrahedron10G4Trait();
+public:
+    typedef std::shared_ptr<zxTetrahedron10G4Trait> Ptr;
+    typedef std::shared_ptr<zxTetrahedron10G4Trait const> ConstPtr;
+public:
+    static zxTetrahedron10G4Trait& Singleton(){static zxTetrahedron10G4Trait instance; return instance;}
+public:
+    virtual void shape_func(real* H,real r,real s,real t);
+    virtual void shape_deriv(real* Hr,real* Hs,real* Ht,real r, real s, real t);
+};
+
+class zxTriangle3G3Trait : public zxTriangle3Trait<3>
+{
+private:
+    zxTriangle3G3Trait();
+public:
+    typedef std::shared_ptr<zxTriangle3G3Trait> Ptr;
+    typedef std::shared_ptr<zxTriangle3G3Trait const> ConstPtr;
+public:
+    static zxTriangle3G3Trait& Singleton(){static zxTriangle3G3Trait instance; return instance;}
+public:
+    virtual void shape_func(real* H,real r,real s,real t);
+    virtual void shape_deriv(real* Hr,real* Hs,real* Ht,real r, real s, real t);
+
+};
+
+class zxTriangle6G3Trait : public zxTriangle6Trait<3>
+{
+private:
+    zxTriangle6G3Trait();
+public:
+    typedef std::shared_ptr<zxTriangle6G3Trait> Ptr;
+    typedef std::shared_ptr<zxTriangle6G3Trait const> ConstPtr;
+public:
+    static zxTriangle6G3Trait& Singleton(){static zxTriangle6G3Trait instance; return instance;}
+public:
+    virtual void shape_func(real* H,real r,real s,real t);
+    virtual void shape_deriv(real* Hr,real* Hs,real* Ht,real r, real s, real t);
 
 };
 
@@ -104,6 +159,8 @@ public:
     real&   get_first_derive_s(zxGaussianTrait::Type type, int n_id,int g_id) {return Singleton().get_traint(type)->get_first_derive_s(n_id,g_id);}
     real&   get_first_derive_t(zxGaussianTrait::Type type, int n_id,int g_id) {return Singleton().get_traint(type)->get_first_derive_t(n_id,g_id);}
     real&   get_gaussian_weight(zxGaussianTrait::Type type, int g_id) {return Singleton().get_traint(type)->get_gaussian_weight(g_id);}
+    void    get_shape_fun(zxGaussianTrait::Type type, real* H,real r,real s,real t) { return Singleton().get_traint(type)->get_shape_fun(H,r,s,t);}
+
 protected:
     zxGaussianTrait* get_traint(zxGaussianTrait::Type type){return m_traits_group[type];}
 
