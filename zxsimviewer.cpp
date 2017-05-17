@@ -46,7 +46,7 @@ void zxSimViewer::init_femsim0()
     zxTetrahedralMesh::Ptr vmesh = zxTetrahedralMesh::create(volfilename);
 
     //use C3D10
-   // vmesh->convertToC3D10();
+    vmesh->convertToC3D10();
 
     zxRenderMesh::Ptr rmesh = zxRenderMesh::create(vmesh);
     zxCollisionMesh::Ptr cmesh  = rmesh;

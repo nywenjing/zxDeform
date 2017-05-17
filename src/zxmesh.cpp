@@ -352,8 +352,7 @@ void zxTetrahedralMesh::buildSurface(Eigen::MatrixXd& V,Eigen::MatrixXi& W_id,Ei
 
             std::vector<Face>::iterator lb = std::lower_bound(singleFace.begin(),singleFace.end(),face);
 
-            if(el == 1752)
-                el = 1752;
+
             if(lb != singleFace.end() && (*lb) == face)
             {
                 (*lb).m_tid = el;
@@ -451,7 +450,28 @@ void zxTetrahedralMesh::buildSurface(Eigen::MatrixXd& V,Eigen::MatrixXi& W_id,Ei
                 this->m_node.resize(6);
             }
 
+            bool operator < (const tVert& vert) const
+            {
+                if(*this == vert)
+                    return false;
+                for(int i = 0; i < 3; i++)
+                {
+                    if(x[i] > vert.x[i])
+                        return false;
+
+                    if(x[i] < vert.x[i])
+                        return true;
+                }
+
+                return false;
+            }
+
+            bool operator == (const tVert& vert) const
+            {
+                return (x - vert.x).norm() < zxEPSILON;
+            }
         public:
+            int   m_id;
             vec3d x;
             std::vector<zxNode::Ptr> m_node;
             std::vector<real>    m_w;
@@ -506,26 +526,66 @@ void zxTetrahedralMesh::buildSurface(Eigen::MatrixXd& V,Eigen::MatrixXi& W_id,Ei
 
         int v_id = 0;
         int f_id = 0;
-        for(std::list<tVert>::iterator it = tVerts.begin();it != tVerts.end();)
+
+        std::vector<tVert> vectVerts(tVerts.begin(),tVerts.end());
+        for(int i = 0; i < vectVerts.size(); i++)
+            vectVerts[i].m_id = i;
+
+        std::vector<tVert> sort_verts = vectVerts;
+        std::sort(sort_verts.begin(),sort_verts.end());
+        std::vector<tVert> uniq_vert = sort_verts;
+        std::vector<tVert>::iterator last = std::unique_copy(sort_verts.begin(),sort_verts.end(),uniq_vert.begin());
+        uniq_vert.resize(std::distance(uniq_vert.begin(),last));
+
+        V.resize(uniq_vert.size(),3);
+        W_id.resize(uniq_vert.size(),6);
+        W_val.resize(uniq_vert.size(),6);
+
+        for(size_t i = 0; i < uniq_vert.size(); i++)
         {
-            for(int vi = 0; vi < 3; vi++)
+            tVert& tv = uniq_vert[i];
+            for(int j = 0; j < 3; j++)
+                V(i,j) = uniq_vert[i].x[j];
+
+            for(int j = 0; j < 6; j++)
             {
-                tVert& tv = *it++;
-                for(int i = 0; i < 3; i++)
-                    V(v_id,i) = tv.x[i];
-                for(int i = 0; i < 6; i++)
-                {
-                    W_id(v_id,i) = tv.m_node[i]->m_id;
-                    W_val(v_id,i) = tv.m_w[i];
-                }
-
-                F(f_id,vi) = v_id;
-
-                v_id++;
+                W_id(i,j) = tv.m_node[j]->m_id;
+                W_val(i,j) = tv.m_w[j];
             }
 
-            f_id++;
+            tv.m_id = i;
         }
+
+        for(int el = 0; el < F.rows(); el++)
+            for(int i = 0; i < 3; i++)
+            {
+                std::vector<tVert>::iterator lb = std::lower_bound(uniq_vert.begin(),uniq_vert.end(),vectVerts[3 * el + i]);
+
+                F(el,i) = (*lb).m_id;
+            }
+
+
+
+//        for(std::list<tVert>::iterator it = tVerts.begin();it != tVerts.end();)
+//        {
+//            for(int vi = 0; vi < 3; vi++)
+//            {
+//                tVert& tv = *it++;
+//                for(int i = 0; i < 3; i++)
+//                    V(v_id,i) = tv.x[i];
+//                for(int i = 0; i < 6; i++)
+//                {
+//                    W_id(v_id,i) = tv.m_node[i]->m_id;
+//                    W_val(v_id,i) = tv.m_w[i];
+//                }
+
+//                F(f_id,vi) = v_id;
+
+//                v_id++;
+//            }
+
+//            f_id++;
+//        }
 
         //        V.resize(singleFace.size() * 3, 3);
         //        W_id.resize(singleFace.size() * 3,3);
