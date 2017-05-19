@@ -116,6 +116,27 @@ public:
     virtual void shape_deriv(real* Hr,real* Hs,real* Ht,real r, real s, real t);
 };
 
+template<size_t NI>
+class zxHexahedronTrait : public zxGaussianTrait_Interface<8,NI>
+{
+
+};
+
+class  zxHexahedronG8Trait : public zxHexahedronTrait<8>
+{
+private:
+    zxHexahedronG8Trait();
+public:
+    typedef std::shared_ptr<zxHexahedronG8Trait> Ptr;
+    typedef std::shared_ptr<zxHexahedronG8Trait const> ConstPtr;
+public:
+    static zxHexahedronG8Trait& Singleton(){static zxHexahedronG8Trait instance; return instance;}
+public:
+    virtual void shape_func(real* H,real r,real s,real t);
+    virtual void shape_deriv(real* Hr,real* Hs,real* Ht,real r, real s, real t);
+
+};
+
 class zxTriangle3G3Trait : public zxTriangle3Trait<3>
 {
 private:

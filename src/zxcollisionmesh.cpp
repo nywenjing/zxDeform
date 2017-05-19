@@ -37,11 +37,11 @@ zxCollisionMesh::zxCollisionMesh(std::string filename)
     build_edges();
 }
 
-zxCollisionMesh::zxCollisionMesh(zxSolidMesh::Ptr mesh)
+zxCollisionMesh::zxCollisionMesh(zxSolidMesh::Ptr mesh,size_t tsLevel)
 {
     Eigen::MatrixXd V,W_val;
     Eigen::MatrixXi F,W_id;
-    mesh->buildSurface(V,W_id,W_val,F);
+    mesh->buildSurface(V,W_id,W_val,F,tsLevel);
 
     m_verts.resize(V.rows());
     m_faces.resize(F.rows());

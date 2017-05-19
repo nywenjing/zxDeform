@@ -74,46 +74,66 @@ zxTetrahedralMesh::zxTetrahedralMesh(std::string filename)
     Eigen::MatrixXd V;
     Eigen::MatrixXi T;
 
-    std::string nodefile = filename + ".node";
-    std::string elefile = filename + ".ele";
-
-
-    std::ifstream ifile;
-    ifile.open(nodefile);
-
-    assert(ifile.is_open());
-
-    size_t nv;
-    size_t dim;
-    size_t flag0,flag1;
-    size_t vid;
-
-    ifile>>nv>>dim>>flag0>>flag1;
-
-    V.resize(nv,3);
-    for(size_t i = 0; i < nv; i++)
+    if(filename.find(".abq") == std::string::npos)
     {
-        ifile>>vid >> V(i,0) >> V(i,1)>>V(i,2);
+        std::string nodefile = filename + ".node";
+        std::string elefile = filename + ".ele";
+
+
+        std::ifstream ifile;
+        ifile.open(nodefile);
+
+        assert(ifile.is_open());
+
+        size_t nv;
+        size_t dim;
+        size_t flag0,flag1;
+        size_t vid;
+
+        ifile>>nv>>dim>>flag0>>flag1;
+
+        V.resize(nv,3);
+        for(size_t i = 0; i < nv; i++)
+        {
+            ifile>>vid >> V(i,0) >> V(i,1)>>V(i,2);
+        }
+
+        ifile.close();
+
+        ifile.open(elefile);
+
+        size_t nt;
+        size_t el_num;
+        size_t tag;
+        size_t e_id;
+
+        ifile>>nt>>el_num>>tag;
+
+        T.resize(nt,4);
+
+        for(size_t i = 0; i < nt; i++)
+            ifile>>e_id>>T(i,0)>>T(i,1)>>T(i,2)>>T(i,3);
+        ifile.close();
+
+    }
+    else
+    {
+        zxAbqReader abqReader(filename);
+
+        V.resize(abqReader.m_nodes.size(),3);
+        T.resize(abqReader.m_elements.size(),4);
+
+        for(size_t i = 0; i < abqReader.m_nodes.size(); i++)
+            for(int j = 0; j < 3; j++)
+                V(i,j) = abqReader.m_nodes[i].x[j];
+
+        for(size_t i = 0; i < abqReader.m_elements.size(); i++)
+            for(int j = 0; j < 4; j++)
+                T(i,j) = abqReader.m_elements[i].m_node_id[j];
     }
 
-    ifile.close();
-
-    ifile.open(elefile);
-
-    size_t nt;
-    size_t el_num;
-    size_t tag;
-    size_t e_id;
-
-    ifile>>nt>>el_num>>tag;
-
-    T.resize(nt,4);
-
-    for(size_t i = 0; i < nt; i++)
-        ifile>>e_id>>T(i,0)>>T(i,1)>>T(i,2)>>T(i,3);
 
 
-    ifile.close();
 
 
     m_nodes.resize(V.rows());
@@ -561,31 +581,38 @@ void zxTetrahedralMesh::buildSurface(Eigen::MatrixXd& V,Eigen::MatrixXi& W_id,Ei
             {
                 std::vector<tVert>::iterator lb = std::lower_bound(uniq_vert.begin(),uniq_vert.end(),vectVerts[3 * el + i]);
 
+                real d = ((*lb).x - vectVerts[F(el,i)].x).norm();
+                if(d > zxEPSILON)
+                {
+                    std::cout<<"error: "<<d<<std::endl;
+                    lb = std::find(uniq_vert.begin(),uniq_vert.end(),vectVerts[F(el,i)]);
+                }
+
                 F(el,i) = (*lb).m_id;
             }
 
 
 
-//        for(std::list<tVert>::iterator it = tVerts.begin();it != tVerts.end();)
-//        {
-//            for(int vi = 0; vi < 3; vi++)
-//            {
-//                tVert& tv = *it++;
-//                for(int i = 0; i < 3; i++)
-//                    V(v_id,i) = tv.x[i];
-//                for(int i = 0; i < 6; i++)
-//                {
-//                    W_id(v_id,i) = tv.m_node[i]->m_id;
-//                    W_val(v_id,i) = tv.m_w[i];
-//                }
+        //        for(std::list<tVert>::iterator it = tVerts.begin();it != tVerts.end();)
+        //        {
+        //            for(int vi = 0; vi < 3; vi++)
+        //            {
+        //                tVert& tv = *it++;
+        //                for(int i = 0; i < 3; i++)
+        //                    V(v_id,i) = tv.x[i];
+        //                for(int i = 0; i < 6; i++)
+        //                {
+        //                    W_id(v_id,i) = tv.m_node[i]->m_id;
+        //                    W_val(v_id,i) = tv.m_w[i];
+        //                }
 
-//                F(f_id,vi) = v_id;
+        //                F(f_id,vi) = v_id;
 
-//                v_id++;
-//            }
+        //                v_id++;
+        //            }
 
-//            f_id++;
-//        }
+        //            f_id++;
+        //        }
 
         //        V.resize(singleFace.size() * 3, 3);
         //        W_id.resize(singleFace.size() * 3,3);
@@ -633,5 +660,290 @@ void zxTetrahedralMesh::buildSurface(Eigen::MatrixXd& V,Eigen::MatrixXi& W_id,Ei
 
     }
 
+
+}
+
+
+zxHexahedralMesh::zxHexahedralMesh(std::string filename)
+{
+
+    zxAbqReader abqReader(filename);
+
+    m_nodes.resize(abqReader.m_nodes.size());
+    m_elements.resize(abqReader.m_elements.size());
+
+
+    for(int n_id = 0; n_id < m_nodes.size(); n_id++)
+    {
+        zxNode::Ptr node = zxNode::create();
+        node->m_id = n_id;
+        node->r0 = node->rp = node->rt = abqReader.m_nodes[n_id].x;
+        m_nodes[n_id] = node;
+    }
+
+    for(int e_id = 0; e_id < m_elements.size(); e_id++)
+    {
+        zxHexahedron::Ptr hexa = zxHexahedron::create();
+        hexa->m_nodes.resize(abqReader.m_elements[e_id].m_node_id.size());
+        for(int j = 0; j < 8; j++)
+            hexa->m_nodes[j] = get_node(abqReader.m_elements[e_id].m_node_id[j] - 1);
+
+        hexa->m_type = zxGaussianTrait::C3D8_8;
+
+
+        hexa->init_material_points();
+        hexa->m_id = e_id;
+        m_elements[e_id] = hexa;
+    }
+
+}
+
+void zxHexahedralMesh::buildSurface(Eigen::MatrixXd& V,Eigen::MatrixXi& W_id,Eigen::MatrixXd& W_val,Eigen::MatrixXi& F,int tsLevel)
+{
+    class Face
+    {
+    public:
+        size_t m_id[4];
+        size_t m_id0[4];
+        size_t m_tid;
+        size_t m_tfid;
+
+    public:
+        bool operator < (const Face& f2) const
+        {
+            for(int i = 0; i < 4; i++)
+            {
+                if(m_id[i] > f2.m_id[i])
+                    return false;
+                if(m_id[i] < f2.m_id[i])
+                    return true;
+            }
+
+            return false;
+        }
+
+        bool operator == (const Face& f2) const
+        {
+            for(int i = 0; i < 4; i++)
+                if(m_id[i] != f2.m_id[i])
+                    return false;
+            return true;
+        }
+    };
+
+    class Hexa
+    {
+    public:
+        size_t m_id[8];
+    };
+
+    std::vector<Hexa> allHexs(get_num_elements());
+
+    for(size_t i = 0; i < get_num_elements(); i++)
+    {
+        Hexa& hex = allHexs[i];
+        for(int j = 0; j < 8; j++)
+            hex.m_id[j] = get_node(i,j)->m_id;
+    }
+
+    std::vector<Face> allFaces(get_num_elements() * 6);
+
+    for(size_t el = 0; el < get_num_elements(); el++)
+    {
+        Hexa& tet = allHexs[el];
+        int face_indices[6][4] ={
+            {1,2,6,5},
+            {4,3,7,8},
+            {1,4,8,5},
+            {2,3,7,6},
+            {5,6,7,8},
+            {1,2,3,4},
+        };
+
+        for(int i = 0; i < 6; i++)
+        {
+            Face& face = allFaces[6 * el + i];
+            for(int j = 0; j < 4; j++)
+                face.m_id0[j] = face.m_id[j] = tet.m_id[face_indices[i][j] - 1];
+
+            std::sort(face.m_id,face.m_id + 4);
+        }
+    }
+
+    std::sort(allFaces.begin(),allFaces.end());
+    std::vector<Face> uniqFace = allFaces;
+    std::vector<Face>::iterator last = std::unique_copy(allFaces.begin(),allFaces.end(),uniqFace.begin());
+
+    uniqFace.resize(std::distance(uniqFace.begin(),last));
+
+    std::vector<Face> singleFace;
+    for(size_t i = 0; i < uniqFace.size(); i++)
+    {
+        Face& face = uniqFace[i];
+        std::vector<Face>::iterator lb = std::lower_bound(allFaces.begin(),allFaces.end(),face);
+        std::vector<Face>::iterator ub = std::upper_bound(allFaces.begin(),allFaces.end(),face);
+
+        assert(lb != allFaces.end());
+
+        if(std::distance(lb,ub) == 1)
+            singleFace.push_back(face);
+
+    }
+
+    class hVert
+    {
+    public:
+        bool operator < (const hVert& vert) const
+        {
+            if(*this == vert)
+                return false;
+            for(int i = 0; i < 3; i++)
+            {
+                if(x[i] > vert.x[i])
+                    return false;
+
+                if(x[i] < vert.x[i])
+                    return true;
+            }
+
+            return false;
+        }
+
+        bool operator == (const hVert& vert) const
+        {
+            return (x - vert.x).norm() < zxEPSILON;
+        }
+    public:
+        vec3d x;
+        int   m_node_id[4];
+        real   m_node_w[4];
+        int   m_id;
+    };
+
+    std::vector<hVert> tsVerts;
+    tsVerts.reserve(singleFace.size() * (tsLevel + 2) * (tsLevel + 2));
+
+    for(size_t el = 0; el < singleFace.size(); el++)
+    {
+        Face& face = singleFace[el];
+
+        real h = 1.0/(tsLevel + 1);
+        for(int li = 0; li <= tsLevel + 1; li++)
+            for(int lj = 0; lj <= tsLevel + 1; lj++)
+            {
+                real r = li * h;
+                real s = lj * h;
+
+                hVert vert;
+                vert.x = (1 - r) * (1 - s) * get_node(face.m_id0[0])->rt
+                       +    r    * (1 - s) * get_node(face.m_id0[1])->rt
+                       +    r    *    s    * get_node(face.m_id0[2])->rt
+                       + (1 - r) *    s    * get_node(face.m_id0[3])->rt;
+
+
+
+                for(int i = 0; i < 4; i++)
+                    vert.m_node_id[i] = face.m_id0[i];
+                vert.m_node_w[0] = (1 - r) * (1 - s);
+                vert.m_node_w[1] =    r    * (1 - s);
+                vert.m_node_w[2] =    r    *    s;
+                vert.m_node_w[3] = (1 - r) *    s;
+
+                tsVerts.push_back(vert);
+            }
+    }
+
+    F.resize(singleFace.size() * (tsLevel + 1) * (tsLevel + 1) * 2,3);
+
+    int f_id = 0;
+    for(int el = 0; el < singleFace.size(); el++)
+        for(int li = 0; li < tsLevel + 1; li++)
+            for(int lj = 0; lj < tsLevel + 1; lj++)
+            {
+                int id0 = el * (tsLevel + 2) * (tsLevel + 2) + li * (tsLevel + 2) + lj;
+                int id1 = el * (tsLevel + 2) * (tsLevel + 2) + li * (tsLevel + 2) + lj + 1;
+                int id2 = el * (tsLevel + 2) * (tsLevel + 2) + (li + 1) * (tsLevel + 2) + lj + 1;
+                int id3 = el * (tsLevel + 2) * (tsLevel + 2) + (li + 1) * (tsLevel + 2) + lj;
+
+
+
+                F(f_id + 0,0) = id1;
+                F(f_id + 0,1) = id0;
+                F(f_id + 0,2) = id2;
+
+
+                F(f_id + 1,0) = id2;
+                F(f_id + 1,1) = id0;
+                F(f_id + 1,2) = id3;
+
+                f_id += 2;
+
+                //std::cout<<id1<<" "<<id0<<" "<<id2<<std::endl;
+                //std::cout<<id2<<" "<<id0<<" "<<id3<<std::endl;
+            }
+
+
+
+
+
+//    V.resize(tsVerts.size(),3);
+//    W_id.resize(tsVerts.size(),4);
+//    W_val.resize(tsVerts.size(),4);
+
+//    for(size_t i = 0; i < tsVerts.size(); i++)
+//    {
+//        for(int j = 0; j < 3; j++)
+//            V(i,j) = tsVerts[i].x[j];
+//        for(int j = 0; j < 4; j++)
+//        {
+//            W_id(i,j) = tsVerts[i].m_node_id[j];
+//            W_val(i,j) = tsVerts[i].m_node_w[j];
+//        }
+
+//        tsVerts[i].m_id = i;
+//    }
+
+
+
+
+    std::vector<hVert> sort_verts = tsVerts;
+    std::sort(sort_verts.begin(),sort_verts.end());
+    std::vector<hVert> uniq_vert = sort_verts;
+    std::vector<hVert>::iterator lastVert = std::unique_copy(sort_verts.begin(),sort_verts.end(),uniq_vert.begin());
+    uniq_vert.resize(std::distance(uniq_vert.begin(),lastVert));
+
+    V.resize(uniq_vert.size(),3);
+    W_id.resize(uniq_vert.size(),4);
+    W_val.resize(uniq_vert.size(),4);
+
+    for(size_t i = 0; i < uniq_vert.size(); i++)
+    {
+        for(int j = 0; j < 3; j++)
+            V(i,j) = uniq_vert[i].x[j];
+        for(int j = 0; j < 4; j++)
+        {
+            W_id(i,j) = uniq_vert[i].m_node_id[j];
+            W_val(i,j) = uniq_vert[i].m_node_w[j];
+        }
+
+        uniq_vert[i].m_id = i;
+    }
+
+    for(int el = 0; el < F.rows(); el++)
+        for(int i = 0; i < 3; i++)
+        {
+
+            std::vector<hVert>::iterator lb = std::lower_bound(uniq_vert.begin(),uniq_vert.end(),tsVerts[F(el,i)]);
+
+
+            real d = ((*lb).x - tsVerts[F(el,i)].x).norm();
+            if(d > zxEPSILON)
+            {
+
+                lb = std::find(uniq_vert.begin(),uniq_vert.end(),tsVerts[F(el,i)]);
+            }
+
+            F(el,i) = (*lb).m_id;
+        }
 
 }

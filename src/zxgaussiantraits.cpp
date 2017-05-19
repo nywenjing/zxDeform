@@ -130,6 +130,70 @@ void zxTetrahedron10G4Trait::shape_deriv(real* Hr,real* Hs,real* Ht,real r, real
 
 }
 
+
+zxHexahedronG8Trait::zxHexahedronG8Trait()
+{
+    m_type = C3D8_8;
+
+
+    const double a = 1.0 / sqrt(3.0);
+
+    m_grst(0,0) = -a; m_grst(0,1) = -a; m_grst(0,2) = -a; m_gw[0] = 1.0/8;
+    m_grst(1,0) =  a; m_grst(1,1) = -a; m_grst(1,2) = -a; m_gw[1] = 1.0/8;
+    m_grst(2,0) =  a; m_grst(2,1) =  a; m_grst(2,2) = -a; m_gw[2] = 1.0/8;
+    m_grst(3,0) = -a; m_grst(3,1) =  a; m_grst(3,2) = -a; m_gw[3] = 1.0/8;
+    m_grst(4,0) = -a; m_grst(4,1) = -a; m_grst(4,2) =  a; m_gw[4] = 1.0/8;
+    m_grst(5,0) =  a; m_grst(5,1) = -a; m_grst(5,2) =  a; m_gw[5] = 1.0/8;
+    m_grst(6,0) =  a; m_grst(6,1) =  a; m_grst(6,2) =  a; m_gw[6] = 1.0/8;
+    m_grst(7,0) = -a; m_grst(7,1) =  a; m_grst(7,2) =  a; m_gw[7] = 1.0/8;
+
+    init();
+}
+
+void zxHexahedronG8Trait::shape_func(real* H,real r,real s,real t)
+{
+    H[0] = 0.125*(1 - r)*(1 - s)*(1 - t);
+    H[1] = 0.125*(1 + r)*(1 - s)*(1 - t);
+    H[2] = 0.125*(1 + r)*(1 + s)*(1 - t);
+    H[3] = 0.125*(1 - r)*(1 + s)*(1 - t);
+    H[4] = 0.125*(1 - r)*(1 - s)*(1 + t);
+    H[5] = 0.125*(1 + r)*(1 - s)*(1 + t);
+    H[6] = 0.125*(1 + r)*(1 + s)*(1 + t);
+    H[7] = 0.125*(1 - r)*(1 + s)*(1 + t);
+
+}
+
+void zxHexahedronG8Trait::shape_deriv(real* Hr,real* Hs,real* Ht,real r, real s, real t)
+{
+    Hr[0] = -0.125*(1 - s)*(1 - t);
+    Hr[1] =  0.125*(1 - s)*(1 - t);
+    Hr[2] =  0.125*(1 + s)*(1 - t);
+    Hr[3] = -0.125*(1 + s)*(1 - t);
+    Hr[4] = -0.125*(1 - s)*(1 + t);
+    Hr[5] =  0.125*(1 - s)*(1 + t);
+    Hr[6] =  0.125*(1 + s)*(1 + t);
+    Hr[7] = -0.125*(1 + s)*(1 + t);
+
+    Hs[0] = -0.125*(1 - r)*(1 - t);
+    Hs[1] = -0.125*(1 + r)*(1 - t);
+    Hs[2] =  0.125*(1 + r)*(1 - t);
+    Hs[3] =  0.125*(1 - r)*(1 - t);
+    Hs[4] = -0.125*(1 - r)*(1 + t);
+    Hs[5] = -0.125*(1 + r)*(1 + t);
+    Hs[6] =  0.125*(1 + r)*(1 + t);
+    Hs[7] =  0.125*(1 - r)*(1 + t);
+
+    Ht[0] = -0.125*(1 - r)*(1 - s);
+    Ht[1] = -0.125*(1 + r)*(1 - s);
+    Ht[2] = -0.125*(1 + r)*(1 + s);
+    Ht[3] = -0.125*(1 - r)*(1 + s);
+    Ht[4] =  0.125*(1 - r)*(1 - s);
+    Ht[5] =  0.125*(1 + r)*(1 - s);
+    Ht[6] =  0.125*(1 + r)*(1 + s);
+    Ht[7] =  0.125*(1 - r)*(1 + s);
+
+}
+
 zxTriangle3G3Trait::zxTriangle3G3Trait()
 {
     m_type = S3_3;
@@ -215,6 +279,7 @@ zxGaussianFactory::zxGaussianFactory()
 {
     m_traits_group[zxTetrahedron4G1Trait::Singleton().m_type] = &(zxTetrahedron4G1Trait::Singleton());
     m_traits_group[zxTetrahedron10G4Trait::Singleton().m_type] = &(zxTetrahedron10G4Trait::Singleton());
+    m_traits_group[zxHexahedronG8Trait::Singleton().m_type] = &(zxHexahedronG8Trait::Singleton());
     m_traits_group[zxTriangle3G3Trait::Singleton().m_type] = &(zxTriangle3G3Trait::Singleton());
     m_traits_group[zxTriangle6G3Trait::Singleton().m_type] = &(zxTriangle6G3Trait::Singleton());
 }

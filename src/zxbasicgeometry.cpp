@@ -23,3 +23,14 @@ real zxTetrahedron::get_volume()
     return 1.0 / 6 * std::abs( (n0->rt - n3->rt).dot( (n1->rt - n3->rt).cross(n2->rt - n3->rt)));
 
 }
+
+real zxSolidElement::get_volume()
+{
+    real vol = 0.0;
+    for(size_t g_id = 0; g_id < get_num_gaussian_points(); g_id++)
+    {
+        vol += get_material_point(g_id)->m_detJac0 * get_gaussian_weight(g_id);
+    }
+
+    return vol;
+}

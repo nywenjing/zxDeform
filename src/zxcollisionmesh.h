@@ -10,9 +10,9 @@ class zxCollisionMesh
 
 public:
      static Ptr create(std::string filename){ return Ptr(new zxCollisionMesh(filename));}
-    static Ptr create(zxSolidMesh::Ptr mesh){ return Ptr(new zxCollisionMesh(mesh));}
+    static Ptr create(zxSolidMesh::Ptr mesh,size_t tsLevel = 0){ return Ptr(new zxCollisionMesh(mesh,tsLevel));}
      zxCollisionMesh(std::string filename);
-     zxCollisionMesh(zxSolidMesh::Ptr mesh);
+     zxCollisionMesh(zxSolidMesh::Ptr mesh,size_t tsLevel = 0);
 
 public:
     class Face;

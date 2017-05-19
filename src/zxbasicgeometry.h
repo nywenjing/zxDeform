@@ -117,7 +117,7 @@ class zxSolidElement : public zxElement
 {
 ZX_MAKE_SHARED_MACO(zxElement)
 public:
-    virtual real get_volume() = 0;
+    virtual real get_volume();
     virtual void init_material_points();
 
 };
@@ -141,6 +141,13 @@ static Ptr create(){return Ptr (new zxTetrahedron());}
 public:
     real get_volume();
 
+};
+
+class zxHexahedron : public zxSolidElement
+{
+    ZX_MAKE_SHARED_MACO(zxHexahedron)
+
+    static Ptr create(){return Ptr (new zxHexahedron());}
 };
 
 #endif // ZXBASICGEOMETRY_H

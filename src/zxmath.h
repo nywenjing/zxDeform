@@ -29,4 +29,8 @@ bool zx_check_edge_edge_collision(const vec3d &x0, const vec3d &x1, const vec3d 
                                const vec3d &xnew0, const vec3d &xnew1, const vec3d &xnew2, const vec3d &xnew3,
                                double &s0, double &s2, vec3d &normal, double &t, double collision_epsilon);
 
+
+void zx_save_matrix(std::string filename,Eigen::MatrixXd& mat);
+void zx_read_matrix(std::string filename,Eigen::MatrixXd& mat);
+
 #endif // ZXMATH_H

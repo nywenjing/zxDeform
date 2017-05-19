@@ -17,8 +17,8 @@ zxRenderMesh::zxRenderMesh(std::string filename)
     m_diffuse = vec4f(0.8,0.8,0.8,1.0);
 }
 
-zxRenderMesh::zxRenderMesh(zxSolidMesh::Ptr mesh)
-    :zxCollisionMesh(mesh)
+zxRenderMesh::zxRenderMesh(zxSolidMesh::Ptr mesh,size_t tsLevel)
+    :zxCollisionMesh(mesh,tsLevel)
 {
 
     m_ambient.setZero();

@@ -17,6 +17,7 @@
 #include <math.h>
 #include <fstream>
 #include <iostream>
+#include <queue>
 
 
 typedef double real;

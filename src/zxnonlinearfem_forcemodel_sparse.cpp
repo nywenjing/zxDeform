@@ -96,6 +96,114 @@ void zxNonlinearFEM_ForceModel_Sparse::updatePosition(const Eigen::VectorXd &u)
 
 }
 
+std::vector<size_t>    zxNonlinearFEM_ForceModel_Sparse::get_element_node_id(int el)
+{
+    std::vector<size_t> elId(m_mesh->get_element(el)->get_num_nodes());
+    for(size_t i = 0; i < m_mesh->get_element(el)->get_num_nodes(); i++)
+        elId[i] = m_mesh->get_element(el)->get_node(i)->m_id;
+
+    return elId;
+
+}
+
+void zxNonlinearFEM_ForceModel_Sparse::computeElementForce(int el, Eigen::VectorXd &force, Eigen::VectorXd &u)
+{
+    zxElement::Ptr element = m_mesh->get_element(el);
+
+    for(size_t i = 0; i < element->get_num_nodes(); i++)
+        for(int j = 0; j < 3; j++)
+            element->get_node(i)->rt[j] = element->get_node(i)->r0[j] + u[3 * i + j];
+
+    force.resize(element->get_num_nodes() * 3);
+    force.setZero();
+
+    for(int g_id = 0; g_id < element->get_num_gaussian_points(); g_id++)
+    {
+        zxMaterialPoint::Ptr p_mat = element->get_material_point(g_id);
+
+        real* Grn = &element->get_first_derive_r(0,g_id);
+        real* Gsn = &element->get_first_derive_s(0,g_id);
+        real* Gtn = &element->get_first_derive_t(0,g_id);
+
+        mat3d& Ji = p_mat->m_invJac0;
+        mat3d& F = p_mat->m_defgrad;
+        F.setZero();
+        for(size_t n_id = 0; n_id < element->get_num_nodes(); n_id++)
+        {
+            double Gri = Grn[n_id];
+            double Gsi = Gsn[n_id];
+            double Gti = Gtn[n_id];
+
+            double x = element->get_node(n_id)->rt[0];
+            double y = element->get_node(n_id)->rt[1];
+            double z = element->get_node(n_id)->rt[2];
+
+            double GX = Ji(0,0)*Gri+Ji(1,0)*Gsi+Ji(2,0)*Gti;
+            double GY = Ji(0,1)*Gri+Ji(1,1)*Gsi+Ji(2,1)*Gti;
+            double GZ = Ji(0,2)*Gri+Ji(1,2)*Gsi+Ji(2,2)*Gti;
+
+            F(0,0) += GX*x; F(0,1) += GY*x; F(0,2) += GZ*x;
+            F(1,0) += GX*y; F(1,1) += GY*y; F(1,2) += GZ*y;
+            F(2,0) += GX*z; F(2,1) += GY*z; F(2,2) += GZ*z;
+        }
+
+        zxModified_SVD(p_mat->m_defgrad,p_mat->m_svd_U,p_mat->m_svd_diag,p_mat->m_svd_V);
+
+        for(size_t ii = 0; ii < 3; ii++)
+        {
+            p_mat->m_svd_diag[ii] = std::min(p_mat->m_svd_diag[ii],m_upper_svd_diag);
+            p_mat->m_svd_diag[ii] = std::max(p_mat->m_svd_diag[ii],m_low_svd_diag);
+        }
+        zx_vega_ComputeDiagonalPstress(m_material,p_mat->m_svd_diag,p_mat->m_diag_P);
+
+        mat3d P;
+        P.setZero();
+        for(int ii = 0; ii < 3; ii++)
+            P(ii,ii) = p_mat->m_diag_P[ii];
+        p_mat->m_Pstress = p_mat->m_svd_U * P * p_mat->m_svd_V.transpose();
+    }
+
+    for (size_t g_id =0; g_id <element->get_num_gaussian_points(); ++g_id)
+    {
+        double Gx, Gy, Gz;
+
+        zxMaterialPoint::Ptr m_pt = element->get_material_point(g_id);
+
+        mat3d& Ji0 = m_pt->m_invJac0;
+        double detJ0 = m_pt->m_detJac0;
+        mat3d& P = m_pt->m_Pstress;
+
+        detJ0 *= element->get_gaussian_weight(g_id);
+
+        real* Gr = &element->get_first_derive_r(0,g_id);
+        real* Gs = &element->get_first_derive_s(0,g_id);
+        real* Gt = &element->get_first_derive_t(0,g_id);
+
+        for(size_t n_id = 0; n_id < element->get_num_nodes(); n_id++)
+        {
+
+            Gx = Ji0(0,0)*Gr[n_id]+Ji0(1,0)*Gs[n_id]+Ji0(2,0)*Gt[n_id];
+            Gy = Ji0(0,1)*Gr[n_id]+Ji0(1,1)*Gs[n_id]+Ji0(2,1)*Gt[n_id];
+            Gz = Ji0(0,2)*Gr[n_id]+Ji0(1,2)*Gs[n_id]+Ji0(2,2)*Gt[n_id];
+
+            //size_t gn_id = element->get_node(n_id)->m_id;
+
+            force[3 * n_id + 0] += (  Gx * P(0,0) +
+                                       Gy * P(0,1) +
+                                       Gz * P(0,2)) * detJ0;
+            force[3 * n_id + 1] += (  Gx * P(1,0) +
+                                       Gy * P(1,1) +
+                                       Gz * P(1,2)) * detJ0;
+
+            force[3 * n_id + 2] += (  Gx * P(2,0) +
+                                       Gy * P(2,1) +
+                                       Gz * P(2,2)) * detJ0;
+        }
+    }
+
+
+}
+
 void zxNonlinearFEM_ForceModel_Sparse::computeForce(Eigen::VectorXd &force)
 {
     force.resize(getForceDimension());

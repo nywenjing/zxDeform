@@ -20,6 +20,10 @@ public:
     virtual void        updatePosition(const Eigen::VectorXd& u);
     virtual void        computeForce(Eigen::VectorXd& force);
     virtual void        computeTangent(zxSparseMatrix& tangentK);
+    virtual size_t      get_num_elements(){return m_mesh->get_num_elements();}
+    virtual void        computeElementForce(int el, Eigen::VectorXd& force,Eigen::VectorXd& u);
+    virtual std::vector<size_t>         get_element_node_id(int el);
+
 
     virtual void        set_svd_lowerBound(real lb){ m_low_svd_diag = lb;}
     virtual void        set_svd_upperBound(real ub){ m_upper_svd_diag = ub;}

@@ -5,6 +5,9 @@
 #include "zxtimestepperbackwardeuler.h"
 #include "zxcontactconstraint.h"
 #include "zxalmfacetofacecontact.h"
+#include "zxcubaturegeneratornnhtp.h"
+#include "zxcubaturemodelfem.h"
+
 #include "igl/per_vertex_normals.h"
 #include <GL/gl.h>
 
@@ -15,10 +18,15 @@ zxSimViewer::zxSimViewer()
     m_world = zxSimWorld::create();
 
     //ica contact
-    init_femsim0();
+    //init_femsim0();
 
     //alm contact
     //init_femsim1();
+
+    //hexmesh
+    //init_femsim2();
+
+    init_femsim3();
 
 }
 
@@ -153,6 +161,71 @@ void zxSimViewer::init_femsim1()
     m_world->add_body(platebody);
 
     m_rad = 6;
+}
+
+void zxSimViewer::init_femsim2()
+{
+    std::string volfilename = "../zxDeform/data/sphereHex.abq";
+
+    //zxAbqReader reader(volfilename);
+    zxHexahedralMesh::Ptr vmesh = zxHexahedralMesh::create(volfilename);
+
+
+    zxRenderMesh::Ptr rmesh = zxRenderMesh::create(vmesh,2);
+    zxCollisionMesh::Ptr cmesh  = rmesh;
+    zxMaterial::Ptr material = zxNeoHookeanMaterial::create(1e6,0.0,1e3);
+    zxNonlinearFEM_ForceModel_Sparse::Ptr forcemodel = zxNonlinearFEM_ForceModel_Sparse::create(vmesh,material);
+    zxTimeStepperBackwardEuler::Ptr stepper = zxTimeStepperBackwardEuler::create(forcemodel);
+    zxBody::Ptr body = zxBody::create();
+    body->set_render_mesh(rmesh);
+    body->set_collision_mesh(cmesh);
+    body->set_stepper(stepper);
+    m_world->add_body(body);
+
+    body->get_bvh_tree()->refit();
+    check_validility(body->get_bvh_tree()->get_root());
+
+    std::string planeName = "../zxDeform/data/plane.obj";
+    zxRenderMesh::Ptr pmesh = zxRenderMesh::create(planeName);
+    zxBody::Ptr plane = zxBody::create();
+    plane->set_render_mesh(pmesh);
+    plane->set_collision_mesh(pmesh);
+
+    m_world->add_body(plane);
+
+    m_rad = 6;
+
+
+}
+
+void zxSimViewer::init_femsim3()
+{
+    std::string volfilename = "../zxDeform/data/cuboid.abq";
+    std::string modeuname = "../zxDeform/data/cuboidL.U";
+    std::string lamdaname = "../zxDeform/data/cuboid.lamda";
+
+    zxTetrahedralMesh::Ptr vmesh = zxTetrahedralMesh::create(volfilename);
+    zxMaterial::Ptr material = zxNeoHookeanMaterial::create(1e6,0.0,1e3);
+    zxNonlinearFEM_ForceModel_Sparse::Ptr forcemodel = zxNonlinearFEM_ForceModel_Sparse::create(vmesh,material);
+
+    Eigen::MatrixXd U;
+    Eigen::MatrixXd Lamda;
+
+    zx_read_matrix(modeuname,U);
+    zx_read_matrix(lamdaname,Lamda);
+
+
+
+    Eigen::VectorXd vecLamda = Eigen::Map<Eigen::VectorXd>(Lamda.data(),Lamda.rows());
+
+
+    zxCubatureModelFEM::Ptr         cubatureFem = zxCubatureModelFEM::create(forcemodel,U,vecLamda);
+    zxCubatureGeneratorNNHTP::Ptr   generatorNNHTP = zxCubatureGeneratorNNHTP::create(cubatureFem);
+    generatorNNHTP->generateSamples(100,1.0);
+    generatorNNHTP->generateCubatures(30);
+
+    m_rad = 6;
+
 }
 
 void zxSimViewer::render()

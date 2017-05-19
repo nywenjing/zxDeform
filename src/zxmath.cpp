@@ -937,3 +937,43 @@ bool zx_check_edge_edge_collision(const vec3d &x0, const vec3d &x1, const vec3d 
     }
     return false;
 }
+
+void zx_save_matrix(std::string filename,Eigen::MatrixXd& mat)
+{
+
+}
+
+void zx_read_matrix(std::string filename,Eigen::MatrixXd& mat)
+{
+    FILE * file;
+    file = fopen(filename.c_str(),"rb");
+    if (!file)
+    {
+        std::cout<<"Can't open input matrix file: %s.\n"<<filename<<std::endl;
+        return;
+    }
+
+    int m,n;
+
+    if ( (fread(&m,sizeof(int),1,file) < 1) || (fread(&n,sizeof(int),1,file) < 1))
+    {
+        std::cout<<"Error reading matrix header from disk file: %s.\n"<<filename<<std::endl;
+        fclose(file);
+        return ;
+    }
+
+    mat.resize(m,n);
+
+    unsigned int readBytes;
+    if ((readBytes = fread(mat.data(),sizeof(double),m*n,file)) < (unsigned int)m*n)
+    {
+        std::cout<<"Error: I have only read"<<readBytes<<" bytes"<<std::endl;
+        fclose(file);
+        return;
+    }
+
+
+
+    fclose(file);
+
+}

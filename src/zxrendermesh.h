@@ -12,10 +12,10 @@ class zxRenderMesh : public zxCollisionMesh
 public:
     zxRenderMesh();
     zxRenderMesh(std::string filename);
-    zxRenderMesh(zxSolidMesh::Ptr mesh);
+    zxRenderMesh(zxSolidMesh::Ptr mesh,size_t tsLevel);
 
     static Ptr create(std::string filename) {return Ptr (new zxRenderMesh(filename));}
-    static Ptr create(zxSolidMesh::Ptr mesh){ return Ptr(new zxRenderMesh(mesh));}
+    static Ptr create(zxSolidMesh::Ptr mesh,size_t tsLevel = 0){ return Ptr(new zxRenderMesh(mesh,tsLevel));}
 
 
 

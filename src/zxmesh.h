@@ -2,7 +2,7 @@
 #define ZXMESH_H
 
 #include "zxbasicgeometry.h"
-
+#include "zxabqreader.h"
 class zxMesh
 {
     ZX_MAKE_SHARED_MACO(zxMesh)
@@ -53,6 +53,18 @@ public:
     virtual void buildSurface(Eigen::MatrixXd& V,Eigen::MatrixXi& W_id,Eigen::MatrixXd& W_val,Eigen::MatrixXi& F,int tsLevel);
 
     static Ptr create(std::string filename) {return std::make_shared<zxTetrahedralMesh>(filename);}
+};
+
+class zxHexahedralMesh : public zxSolidMesh
+{
+    ZX_MAKE_SHARED_MACO(zxHexahedralMesh)
+    public:
+        zxHexahedralMesh(std::string filename);
+
+        virtual void buildSurface(Eigen::MatrixXd& V,Eigen::MatrixXi& W_id,Eigen::MatrixXd& W_val,Eigen::MatrixXi& F,int tsLevel);
+
+        static Ptr create(std::string filename) {return (Ptr) new zxHexahedralMesh(filename);}
+
 };
 
 class zxTriangularMesh : public zxSurfaceMesh

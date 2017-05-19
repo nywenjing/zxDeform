@@ -52,7 +52,13 @@ SOURCES += main.cpp\
     src/zxclothforcemodel.cpp \
     src/zxalmsimulator.cpp \
     src/zxalmcontactinterface.cpp \
-    src/zxalmfacetofacecontact.cpp
+    src/zxalmfacetofacecontact.cpp \
+    src/zxabqreader.cpp \
+    src/zxcubaturegeneratornnhtp.cpp \
+    src/zxcubaturemodel.cpp \
+    src/zxnnls_solver.cpp \
+    src/mersennetwister.cpp \
+    src/zxcubaturemodelfem.cpp
 
 HEADERS  += mainwindow.h \
     src/zxmath.h \
@@ -84,6 +90,12 @@ HEADERS  += mainwindow.h \
     src/zxclothforcemodel.h \
     src/zxalmsimulator.h \
     src/zxalmcontactinterface.h \
-    src/zxalmfacetofacecontact.h
+    src/zxalmfacetofacecontact.h \
+    src/zxabqreader.h \
+    src/zxcubaturegeneratornnhtp.h \
+    src/zxcubaturemodel.h \
+    src/zxnnls_solver.h \
+    src/mersennetwister.h \
+    src/zxcubaturemodelfem.h
 
 FORMS    += mainwindow.ui
