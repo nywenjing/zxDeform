@@ -5,6 +5,13 @@
 #include "zxlcpconstraint.h"
 #include "zxcontactpoint.h"
 
+enum zxCollisionResponseScheme
+{
+    LCP,
+    ALM,
+    Penalty
+};
+
 class zxSimWorld
 {
     ZX_MAKE_SHARED_MACO_DEFAULT_CREAT(zxSimWorld)
@@ -23,11 +30,16 @@ public:
 public:
     void        set_margin(real margin){ m_margin = margin;}
     void        set_friction(real friction){ m_friction = friction;}
+    void        set_collision_response_scheme(zxCollisionResponseScheme scheme);
 protected:
     void        do_unconstrained_step();
     size_t      do_ccd();
     size_t      do_proxy();
     void        do_iac();
+
+
+protected:
+    void        do_alm();
 protected:
     std::vector<zxBody::Ptr>            m_bodies;
     std::list<zxLCPConstraint::Ptr>     m_dynamic_lcps;
@@ -38,6 +50,7 @@ protected:
 
 public:
     std::vector<zxContactPoint::Ptr>    m_debug_ccd_contact;
+    zxCollisionResponseScheme            m_col_sceme;
 
 };
 

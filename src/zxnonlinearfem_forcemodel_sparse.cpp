@@ -40,13 +40,38 @@ zxNonlinearFEM_ForceModel_Sparse::zxNonlinearFEM_ForceModel_Sparse(zxSolidMesh::
 
 void zxNonlinearFEM_ForceModel_Sparse::updatePosition(const Eigen::VectorXd &u)
 {
-    for(size_t i = 0; i < m_mesh->get_num_nodes(); i++)
-        for(int j = 0; j < 3; j++)
-            m_mesh->get_node(i)->rt[j] = m_mesh->get_node(i)->r0[j] + u[3 * i + j];
-
-    for(size_t el = 0; el < m_mesh->get_num_elements(); el++)
+    if(is_reduced())
     {
-        zxElement::Ptr element = m_mesh->get_element(el);
+        for(int el = 0; el < m_cubatures.size(); el++)
+        {
+            int elid = m_cubatures[el].first;
+
+            Eigen::VectorXd eu = m_Ue[el] * u;
+
+            zxElement::Ptr element = m_mesh->get_element(elid);
+            for(int i = 0; i < element->get_num_nodes(); i++)
+                for(int j = 0; j  <3; j++)
+                    element->get_node(i)->rt[j] = element->get_node(i)->r0[j] + eu[3 * i + j];
+        }
+
+    }
+    else
+    {
+        for(size_t i = 0; i < m_mesh->get_num_nodes(); i++)
+            for(int j = 0; j < 3; j++)
+                m_mesh->get_node(i)->rt[j] = m_mesh->get_node(i)->r0[j] + u[3 * i + j];
+    }
+
+    int numElements = m_mesh->get_num_elements();
+    if(is_reduced())
+        numElements = m_cubatures.size();
+
+    for(size_t el = 0; el < numElements; el++)
+    {
+        int elid = el;
+        if(is_reduced())
+            elid = m_cubatures[el].first;
+        zxElement::Ptr element = m_mesh->get_element(elid);
         for(int g_id = 0; g_id < element->get_num_gaussian_points(); g_id++)
         {
             zxMaterialPoint::Ptr p_mat = element->get_material_point(g_id);
@@ -209,43 +234,21 @@ void zxNonlinearFEM_ForceModel_Sparse::computeForce(Eigen::VectorXd &force)
     force.resize(getForceDimension());
     force.setZero();
 
-    //    for(size_t el = 0; el < m_mesh->get_num_elements(); el++)
-    //    {
-    //        zxElement::Ptr element = m_mesh->get_element(el);
-
-    //        for(size_t g_id = 0; g_id < element->get_num_gaussian_points(); g_id++)
-    //        {
-    //            zxMaterialPoint::Ptr p_mat = element->get_material_point(g_id);
-
-    //            for(size_t n_id = 0; n_id < element->get_num_nodes(); n_id++)
-    //            {
-    //                const vec3d r = element->get_node(n_id)->rp;
-
-    //                real dg_drst[3] = {element->get_first_derive_r(n_id,g_id),
-    //                                   element->get_first_derive_s(n_id,g_id),
-    //                                   element->get_first_derive_t(n_id,g_id)};
-
-    //                for(size_t i = 0; i < 3; i++)
-    //                {
-    //                    size_t dof_id = 3 * element->get_node(n_id)->m_id + i;
-
-    //                    for(size_t ll = 0; ll < 3; ll++)
-    //                        for(size_t kk = 0; kk < 3; kk++)
-    //                            force[dof_id] -= p_mat->m_invJac0(kk,ll) * dg_drst[ll] * p_mat->m_Pstress(i,kk) * p_mat->m_detJac0;
-    //                }
-
-    //            }
-    //        }
-
-    //    }
-
-
-
     double Gx, Gy, Gz;
 
-    for(size_t el = 0; el < m_mesh->get_num_elements(); el++)
+    int numElements = m_mesh->get_num_elements();
+    if(is_reduced())
+        numElements = m_cubatures.size();
+
+    for(size_t el = 0; el < numElements; el++)
     {
-        zxElement::Ptr element = m_mesh->get_element(el);
+        int e_id = el;
+        if(is_reduced())
+            e_id = m_cubatures[el].first;
+        zxElement::Ptr element = m_mesh->get_element(e_id);
+
+        Eigen::VectorXd elforce(element->get_num_nodes() * 3);
+        elforce.setZero();
 
         for (size_t g_id =0; g_id <element->get_num_gaussian_points(); ++g_id)
         {
@@ -270,19 +273,74 @@ void zxNonlinearFEM_ForceModel_Sparse::computeForce(Eigen::VectorXd &force)
 
                 size_t gn_id = element->get_node(n_id)->m_id;
 
-                force[3 * gn_id + 0] += (  Gx * P(0,0) +
-                                           Gy * P(0,1) +
-                                           Gz * P(0,2)) * detJ0;
-                force[3 * gn_id + 1] += (  Gx * P(1,0) +
-                                           Gy * P(1,1) +
-                                           Gz * P(1,2)) * detJ0;
+                if(is_reduced())
+                {
+                    elforce[3 * n_id + 0] += (  Gx * P(0,0) +
+                                               Gy * P(0,1) +
+                                               Gz * P(0,2)) * detJ0;
+                    elforce[3 * n_id + 1] += (  Gx * P(1,0) +
+                                               Gy * P(1,1) +
+                                               Gz * P(1,2)) * detJ0;
 
-                force[3 * gn_id + 2] += (  Gx * P(2,0) +
-                                           Gy * P(2,1) +
-                                           Gz * P(2,2)) * detJ0;
+                    elforce[3 * n_id + 2] += (  Gx * P(2,0) +
+                                               Gy * P(2,1) +
+                                               Gz * P(2,2)) * detJ0;
+
+                }
+                else
+                {
+                    force[3 * gn_id + 0] += (  Gx * P(0,0) +
+                                               Gy * P(0,1) +
+                                               Gz * P(0,2)) * detJ0;
+                    force[3 * gn_id + 1] += (  Gx * P(1,0) +
+                                               Gy * P(1,1) +
+                                               Gz * P(1,2)) * detJ0;
+
+                    force[3 * gn_id + 2] += (  Gx * P(2,0) +
+                                               Gy * P(2,1) +
+                                               Gz * P(2,2)) * detJ0;
+
+                }
+
+
             }
+            if(is_reduced())
+                force += m_UeT[el] * elforce * m_cubatures[el].second;
         }
     }
+}
+
+void zxNonlinearFEM_ForceModel_Sparse::computeTangent(Eigen::MatrixXd &tangentK)
+{
+    tangentK.setZero();
+
+    for(size_t el = 0; el < m_cubatures.size(); el++)
+    {
+        std::pair<int,real> cub = m_cubatures[el];
+        zxElement::Ptr element = m_mesh->get_element(cub.first);
+
+        Eigen::MatrixXd elKe(3 * element->get_num_nodes(),3 * element->get_num_nodes());
+        elKe.setZero();
+
+        for(size_t g_id = 0; g_id < element->get_num_gaussian_points(); g_id++)
+        {
+            zxMaterialPoint::Ptr p_mat = element->get_material_point(g_id);
+
+            Eigen::MatrixXd& dFdx = p_mat->m_dFdr;//(9, 3 * neln);
+            Eigen::MatrixXd& dPdF = p_mat->m_dPsdF_diag;//(9,9);
+            Eigen::MatrixXd& dFdxT = p_mat->m_dFdr_trans;
+            dPdF.setZero();
+            double detJ0 = p_mat->m_detJac0;
+            detJ0 *= element->get_gaussian_weight(g_id);
+            zx_vega_ComputePartialPstress_to_DefGrad(m_material,p_mat->m_svd_U,p_mat->m_svd_diag,p_mat->m_svd_V,p_mat->m_dPsdF_diag);
+            dPdF *= detJ0;
+            elKe += dFdxT * dPdF.transpose() * dFdx;
+        }
+        elKe *= cub.second;
+
+        tangentK += m_UeT[el] * elKe * m_Ue[el];
+    }
+
 }
 
 void zxNonlinearFEM_ForceModel_Sparse::computeTangent(zxSparseMatrix &tangentK)

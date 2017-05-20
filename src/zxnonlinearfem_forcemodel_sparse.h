@@ -29,6 +29,9 @@ public:
     virtual void        set_svd_upperBound(real ub){ m_upper_svd_diag = ub;}
 
 public:
+    void                computeTangent(Eigen::MatrixXd& tangentK);
+
+public:
 
     real        m_low_svd_diag;
     real        m_upper_svd_diag;

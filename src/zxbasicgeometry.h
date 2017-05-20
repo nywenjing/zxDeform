@@ -51,6 +51,8 @@ public:
 
         m_bc[0] = m_bc[1] = m_bc[2] = zxFree;
         m_dof_id[0] = m_dof_id[1] = m_dof_id[2] = -1;
+        m_alm_b.setZero();m_alm_Ab.setZero();
+        m_id = -1;
 
         reset_iac();
     }
@@ -68,6 +70,7 @@ public:
     void reset_iac(){ m_isLcp = false; m_lcp_res_imp = m_lcp_dx = m_lcp_pcg_dx = m_lcp_imp = vec3d::Zero(); m_lcp_invA.setZero();}
     bool    m_isLcp;
     vec3d   m_lcp_dx,m_lcp_pcg_dx,m_lcp_imp,m_lcp_res_imp;
+    vec3d   m_alm_b,m_alm_Ab;
     mat3d   m_lcp_invA;
 
 public:

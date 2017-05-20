@@ -26,7 +26,11 @@ zxSimViewer::zxSimViewer()
     //hexmesh
     //init_femsim2();
 
-    init_femsim3();
+    //cubature generation
+    //init_femsim3();
+
+    //subspace simulation
+    init_femsim4();
 
 }
 
@@ -54,7 +58,7 @@ void zxSimViewer::init_femsim0()
     zxTetrahedralMesh::Ptr vmesh = zxTetrahedralMesh::create(volfilename);
 
     //use C3D10
-    vmesh->convertToC3D10();
+    //vmesh->convertToC3D10();
 
     zxRenderMesh::Ptr rmesh = zxRenderMesh::create(vmesh);
     zxCollisionMesh::Ptr cmesh  = rmesh;
@@ -223,6 +227,65 @@ void zxSimViewer::init_femsim3()
     zxCubatureGeneratorNNHTP::Ptr   generatorNNHTP = zxCubatureGeneratorNNHTP::create(cubatureFem);
     generatorNNHTP->generateSamples(100,1.0);
     generatorNNHTP->generateCubatures(30);
+
+    m_rad = 6;
+
+}
+
+void zxSimViewer::init_femsim4()
+{
+    std::string volfilename = "../zxDeform/data/torus.1";
+    std::string modeuname = "../zxDeform/data/torusNL.U";
+    std::string cubaturefile = "../zxDeform/data/torus.cubature";
+    zxTetrahedralMesh::Ptr vmesh = zxTetrahedralMesh::create(volfilename);
+
+    zxRenderMesh::Ptr rmesh = zxRenderMesh::create(vmesh);
+    zxCollisionMesh::Ptr cmesh  = rmesh;
+    zxMaterial::Ptr material = zxNeoHookeanMaterial::create(1e4,0.0,1e3);
+    zxNonlinearFEM_ForceModel_Sparse::Ptr forcemodel = zxNonlinearFEM_ForceModel_Sparse::create(vmesh,material);
+
+    {
+        Eigen::MatrixXd U;
+        zx_read_matrix(modeuname,U);
+
+        FILE* fp = fopen(cubaturefile.c_str(),"r");
+
+        int nc = 0;
+        int id = 0;
+        float w = 0;
+
+        fscanf(fp,"%d\n",&nc);
+
+        std::vector<std::pair<int,real>> cubatures(nc);
+        for(int i = 0; i < nc; i++)
+        {
+            fscanf(fp,"%d %f\n",&id,&w);
+            cubatures[i].first = id;
+            cubatures[i].second = w;
+        }
+
+        forcemodel->set_reduced_model(U,cubatures);
+        fclose(fp);
+
+
+    }
+    zxTimeStepperBackwardEuler::Ptr stepper = zxTimeStepperBackwardEuler::create(forcemodel);
+    zxBody::Ptr body = zxBody::create();
+    body->set_render_mesh(rmesh);
+    body->set_collision_mesh(cmesh);
+    body->set_stepper(stepper);
+    m_world->add_body(body);
+
+    body->get_bvh_tree()->refit();
+    check_validility(body->get_bvh_tree()->get_root());
+
+    std::string planeName = "../zxDeform/data/plane.obj";
+    zxRenderMesh::Ptr pmesh = zxRenderMesh::create(planeName);
+    zxBody::Ptr plane = zxBody::create();
+    plane->set_render_mesh(pmesh);
+    plane->set_collision_mesh(pmesh);
+
+    m_world->add_body(plane);
 
     m_rad = 6;
 

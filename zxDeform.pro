@@ -58,7 +58,8 @@ SOURCES += main.cpp\
     src/zxcubaturemodel.cpp \
     src/zxnnls_solver.cpp \
     src/mersennetwister.cpp \
-    src/zxcubaturemodelfem.cpp
+    src/zxcubaturemodelfem.cpp \
+    src/zxcglinearsolver.cpp
 
 HEADERS  += mainwindow.h \
     src/zxmath.h \
@@ -96,6 +97,7 @@ HEADERS  += mainwindow.h \
     src/zxcubaturemodel.h \
     src/zxnnls_solver.h \
     src/mersennetwister.h \
-    src/zxcubaturemodelfem.h
+    src/zxcubaturemodelfem.h \
+    src/zxcglinearsolver.h
 
 FORMS    += mainwindow.ui

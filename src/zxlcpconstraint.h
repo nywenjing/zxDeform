@@ -16,10 +16,15 @@ public:
 
     virtual void init();
 
+    virtual void compute_alm_Ab();
+    virtual void do_alm_augment();
+    virtual void set_alm_impulse();
+
 
 public:
     std::vector<zxNode::Ptr> get_nodes(){return m_nodes;}
     std::vector<real>        get_weights(){return m_weights;}
+    void                     set_penalty(real penalty){m_penalty = penalty;}
 
 
 
@@ -30,6 +35,7 @@ protected:
     real                     m_cb,m_invJtAJ;
     real                     m_lambda;
     real                     m_upper_limits,m_lower_limits;
+    real                     m_penalty;
 };
 
 #endif // ZXLCPCONSTRAINT_H

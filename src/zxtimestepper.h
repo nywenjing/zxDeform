@@ -21,10 +21,18 @@ public:
 
 
 public:
-    virtual void do_step(real dt) {}
+    virtual void do_step(real dt) = 0;
     virtual void compute_iac_response() = 0;
     virtual void reset_iac() = 0;
     virtual void update_mesh();
+    virtual size_t  get_dim() = 0;
+    virtual zxForceModel::Ptr   get_force_model(){return m_forceModel;}
+
+public:
+    virtual void do_cg_alm_multi(double* Ab,double* b) = 0;
+    virtual void do_project_alm_ab(double *Ab) = 0;
+    virtual void do_project_alm_impulse(double* b) = 0;
+    virtual void post_update_alm_constraint(double* x) = 0;
 
 
 protected:
@@ -41,6 +49,9 @@ protected:
     zxSparseMatrix  m_stiff_spmat;
     zxSparseMatrix  m_sys_spmat;
     Eigen::VectorXd m_residual;
+
+protected:
+    Eigen::MatrixXd m_mass_dnmat,m_stfiff_dnmat,m_sys_dnmat;
 
     real            m_dt;
 };

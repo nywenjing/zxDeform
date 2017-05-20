@@ -17,9 +17,13 @@ zxTimeStepper::zxTimeStepper(zxForceModel::Ptr forcemodel)
 void zxTimeStepper::update_mesh()
 {
     zxMesh::Ptr mesh = m_forceModel->get_mesh();
+
+    Eigen::VectorXd gpos = m_pos;
+    if(m_forceModel->is_reduced())
+        gpos = m_forceModel->get_subspace_modes() * m_pos;
     for(size_t i = 0; i < mesh->get_num_nodes(); i++)
     {
         zxNode::Ptr node = mesh->get_node(i);
-        node->rt = node->r0 + vec3d(m_pos[3 * i + 0],m_pos[3 * i + 1],m_pos[3 * i + 2]);
+        node->rt = node->r0 + vec3d(gpos[3 * i + 0],gpos[3 * i + 1],gpos[3 * i + 2]);
     }
 }

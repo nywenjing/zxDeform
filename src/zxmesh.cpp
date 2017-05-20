@@ -581,7 +581,7 @@ void zxTetrahedralMesh::buildSurface(Eigen::MatrixXd& V,Eigen::MatrixXi& W_id,Ei
             {
                 std::vector<tVert>::iterator lb = std::lower_bound(uniq_vert.begin(),uniq_vert.end(),vectVerts[3 * el + i]);
 
-                real d = ((*lb).x - vectVerts[F(el,i)].x).norm();
+                real d = ((*lb).x - vectVerts[3 * el + i].x).norm();
                 if(d > zxEPSILON)
                 {
                     std::cout<<"error: "<<d<<std::endl;

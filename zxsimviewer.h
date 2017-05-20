@@ -21,6 +21,7 @@ public:
     virtual void init_femsim1();
     virtual void init_femsim2();
     virtual void init_femsim3();
+    virtual void init_femsim4();
 
 
 
