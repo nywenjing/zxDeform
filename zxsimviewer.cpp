@@ -18,7 +18,7 @@ zxSimViewer::zxSimViewer()
     m_world = zxSimWorld::create();
 
     //ica contact
-    //init_femsim0();
+    init_femsim0();
 
     //alm contact
     //init_femsim1();
@@ -30,7 +30,7 @@ zxSimViewer::zxSimViewer()
     //init_femsim3();
 
     //subspace simulation
-    init_femsim4();
+    //init_femsim4();
 
 }
 
@@ -74,7 +74,7 @@ void zxSimViewer::init_femsim0()
     body->get_bvh_tree()->refit();
     check_validility(body->get_bvh_tree()->get_root());
 
-    std::string planeName = "../zxDeform/data/plane.obj";
+    std::string planeName = "../zxDeform/data/plane.off";
     zxRenderMesh::Ptr pmesh = zxRenderMesh::create(planeName);
     zxBody::Ptr plane = zxBody::create();
     plane->set_render_mesh(pmesh);
@@ -100,8 +100,8 @@ void zxSimViewer::init_femsim1()
     zxNonlinearFEM_ForceModel_Sparse::Ptr cubeforcemodel = zxNonlinearFEM_ForceModel_Sparse::create(cubemesh,material);
     zxNonlinearFEM_ForceModel_Sparse::Ptr plateforcemodel = zxNonlinearFEM_ForceModel_Sparse::create(platemesh,material);
 
-    cubesurf->save("../zxDeform/data/cube.obj");
-    platesurf->save("../zxDeform/data/plate.obj");
+    cubesurf->save("../zxDeform/data/cube.off");
+    platesurf->save("../zxDeform/data/plate.off");
     zxALMSimulator::Ptr simulator = zxALMSimulator::create();
     real eps = 1e7;
     zxALMFaceToFaceContact::Ptr contactInterface = zxALMFaceToFaceContact::create(platesurf,cubesurf,eps);
@@ -189,7 +189,7 @@ void zxSimViewer::init_femsim2()
     body->get_bvh_tree()->refit();
     check_validility(body->get_bvh_tree()->get_root());
 
-    std::string planeName = "../zxDeform/data/plane.obj";
+    std::string planeName = "../zxDeform/data/plane.off";
     zxRenderMesh::Ptr pmesh = zxRenderMesh::create(planeName);
     zxBody::Ptr plane = zxBody::create();
     plane->set_render_mesh(pmesh);
@@ -279,7 +279,7 @@ void zxSimViewer::init_femsim4()
     body->get_bvh_tree()->refit();
     check_validility(body->get_bvh_tree()->get_root());
 
-    std::string planeName = "../zxDeform/data/plane.obj";
+    std::string planeName = "../zxDeform/data/plane.off";
     zxRenderMesh::Ptr pmesh = zxRenderMesh::create(planeName);
     zxBody::Ptr plane = zxBody::create();
     plane->set_render_mesh(pmesh);
